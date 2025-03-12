@@ -82,9 +82,9 @@ const
 type
   TProcessDataProc  = function(Addr: PByte; Size: integer): integer;
   TChangeVolProc    = function(ArcName: PAnsiChar; Mode: integer): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
-  TUnRarCallBack    = function(msg: Cardinal; UserData, P1, P2: LPARAM): integer; {stdcall;} {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+  TUnRarCallBack    = function(msg: Cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {stdcall;} {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
-  {$ALIGN 8}
+  {$ALIGN 1}
   TRARArchiveData = record
     ArcName:    PAnsiChar;
     OpenMode:   cardinal;
@@ -97,7 +97,7 @@ type
   {$A-} // Reset alignment to default
   PRARArchiveData = ^TRARArchiveData;
 
-  {$ALIGN 8}
+  {$ALIGN 1}
   TRARArchiveDataEx = record
     ArcName:    PAnsiChar;
     ArcNameW:   PWideChar;
@@ -117,7 +117,7 @@ type
   {$A-} // Reset alignment to default
   PRARArchiveDataEx = ^TRARArchiveDataEx;
 
-  {$ALIGN 8}
+  {$ALIGN 1}
   TRARHeaderData = record
     ArcName:    array[0..259] of AnsiChar;
     FileName:   array[0..259] of AnsiChar;
@@ -139,7 +139,7 @@ type
   PRARHeaderData = ^TRARHeaderData;
 
   //for UniCode FileNames and 64-Bit Sizes
-  {$ALIGN 8}
+  {$ALIGN 1}
   TRARHeaderDataEx = record
     ArcName:      array[0..1023] of AnsiChar;
     ArcNameW:     array[0..1023] of WideChar;
@@ -164,7 +164,7 @@ type
     HashType:     cardinal;                   // Baz
     Blake2:       array[0..31] of byte;       // Baz
     Reserved:     array[0..981] of cardinal;
-    reserved2:    array[0..1024] of cardinal; // BAZ - vital - possible buffer overrun in unrar.dll - RARReadHeaderEx will AV without some extra padding here.
+//    reserved2:    array[0..1024] of cardinal; // BAZ - vital - possible buffer overrun in unrar.dll - RARReadHeaderEx will AV without some extra padding here.
   end;
   {$A-} // Reset alignment to default
   PRARHeaderDataEx = ^TRARHeaderDataEx;
