@@ -80,7 +80,7 @@ TRARReplace = (rrCancel, rrOverwrite, rrSkip);
 type
   TOnRARErrorNotifyEvent    = procedure(Sender: TObject; const aErrorCode: integer; const aOperation: TRAROperation) of object;
   TOnRARListFile            = procedure(Sender: TObject; const aFileInformation: TRARFileItem) of object;
-  TOnRARPasswordRequired    = procedure(Sender: TObject; const aHeaderPassword: boolean; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel:boolean) of object;
+  TOnRARPasswordRequired    = procedure(Sender: TObject; const aHeaderPassword: boolean; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
   TOnRARNextVolumeRequired  = procedure(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean) of object;
   TOnRARProgress            = procedure(Sender: TObject; const aProgressInfo: TRARProgressInfo) of object;
   TOnRARReplace             = procedure(Sender: TObject; const aExistingData:TRARReplaceData; aNewData:TRARReplaceData; out oAction: TRARReplace) of object;
@@ -201,7 +201,7 @@ begin
   debugFormat('FileBytesTotal: %d, FileBytesDone: %d', [aProgressInfo.FileBytesTotal, aProgressInfo.FileBytesDone]);
 end;
 
-function TRAR.onUnRarCallBack(msg: cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+function TRAR.onUnRarCallBack(msg: cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer;
 var
   vPassword:      AnsiString;
   vFileName:      AnsiString;
@@ -380,10 +380,10 @@ begin
 
   // NOT last, NOT first part
   if (FReadMVToEnd) and (((aHeaderDataEx.Flags AND $00000001) = $00000001))
-                    and (((aHeaderDataEx.Flags AND $00000002) = $00000002)) then begin
-                                                                                          FPackedSizeMVVolume := FPackedSizeMVVolume + aHeaderDataEx.PackSize;
-                                                                                          EXIT;
-                                                                                        end;
+                    and (((aHeaderDataEx.Flags AND $00000002) = $00000002)) then  begin
+                                                                                    FPackedSizeMVVolume := FPackedSizeMVVolume + aHeaderDataEx.PackSize;
+                                                                                    EXIT;
+                                                                                  end;
   // last part
   if (FReadMVToEnd) and     (((aHeaderDataEx.Flags AND $00000001) = $00000001))
                     and (NOT ((aHeaderDataEx.Flags AND $00000002) = $00000002))

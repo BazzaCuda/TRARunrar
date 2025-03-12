@@ -85,39 +85,6 @@ type
   TUnRarCallBack    = function(msg: Cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {stdcall;} {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
   {$ALIGN 1}
-  TRARArchiveData = record
-    ArcName:    PAnsiChar;
-    OpenMode:   cardinal;
-    OpenResult: cardinal;
-    CmtBuf:     PAnsiChar;
-    CmtBufSize: cardinal;
-    CmtSize:    cardinal;
-    CmtState:   cardinal;
-  end;
-  {$A-} // Reset alignment to default
-  PRARArchiveData = ^TRARArchiveData;
-
-  {$ALIGN 1}
-  TRARArchiveDataEx = record
-    ArcName:    PAnsiChar;
-    ArcNameW:   PWideChar;
-    OpenMode:   cardinal;
-    OpenResult: cardinal;
-    CmtBuf:     PAnsiChar;
-    CmtBufSize: cardinal;
-    CmtSize:    cardinal;
-    CmtState:   cardinal;
-    Flags:      cardinal;
-    Callback:   cardinal;
-    LParam:     cardinal;
-    OpFlags:    cardinal;
-    CmtBufW:    PWideChar;
-    Reserved:   array[1..25] of cardinal;
-  end;
-  {$A-} // Reset alignment to default
-  PRARArchiveDataEx = ^TRARArchiveDataEx;
-
-  {$ALIGN 1}
   TRARHeaderData = record
     ArcName:    array[0..259] of AnsiChar;
     FileName:   array[0..259] of AnsiChar;
@@ -164,20 +131,53 @@ type
     HashType:     cardinal;                   // Baz
     Blake2:       array[0..31] of byte;       // Baz
     Reserved:     array[0..981] of cardinal;
-//    reserved2:    array[0..1024] of cardinal; // BAZ - vital - possible buffer overrun in unrar.dll - RARReadHeaderEx will AV without some extra padding here.
   end;
   {$A-} // Reset alignment to default
   PRARHeaderDataEx = ^TRARHeaderDataEx;
 
+  {$ALIGN 1}
+  TRAROpenArchiveData = record
+    ArcName:    PAnsiChar;
+    OpenMode:   cardinal;
+    OpenResult: cardinal;
+    CmtBuf:     PAnsiChar;
+    CmtBufSize: cardinal;
+    CmtSize:    cardinal;
+    CmtState:   cardinal;
+  end;
+  {$A-} // Reset alignment to default
+  PRAROpenArchiveData = ^TRAROpenArchiveData;
+
+  {$ALIGN 1}
+  TRARArchiveDataEx = record
+    ArcName:    PAnsiChar;
+    ArcNameW:   PWideChar;
+    OpenMode:   cardinal;
+    OpenResult: cardinal;
+    CmtBuf:     PAnsiChar;
+    CmtBufSize: cardinal;
+    CmtSize:    cardinal;
+    CmtState:   cardinal;
+    Flags:      cardinal;
+    Callback:   cardinal;
+    LParam:     cardinal;
+    OpFlags:    cardinal;
+    CmtBufW:    PWideChar;
+    Reserved:   array[1..25] of cardinal;
+  end;
+  {$A-} // Reset alignment to default
+  PRARArchiveDataEx = ^TRARArchiveDataEx;
+
 var
-  RAROpenArchive:         function  (ArchiveData: PRARArchiveData):   THandle;                                                    {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
-  RAROpenArchiveEx:       function  (ArchiveData: PRARArchiveDataEx): THandle;                                                    {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+  RAROpenArchive:         function  (ArchiveData: PRAROpenArchiveData): THandle;                                                  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+  RAROpenArchiveEx:       function  (ArchiveData: PRARArchiveDataEx):   THandle;                                                  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
   RARCloseArchive:        function  (hArcData: THandle):                                                                integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   RARReadHeader:          function  (hArcData: THandle; HeaderData: PRARHeaderData):                                    integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   RARReadHeaderEx:        function  (hArcData: THandle; HeaderData: PRARHeaderDataEx):                                  integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
   RARProcessFile:         function  (hArcData: THandle; Operation: integer; DestPath: PAnsiChar; DestName: PAnsiChar):  integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+  RARProcessFileW:        function  (hArcData: THandle; Operation: integer; DestPath: PWideChar; DestName: PWideChar):  integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
   RARSetCallback:         procedure (hArcData: THandle; Callback:         TUnRarCallback; UserData: LPARAM);                      {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   RARSetChangeVolProc:    procedure (hArcData: THandle; ChangeVolProc:    TChangeVolProc);                                        {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
