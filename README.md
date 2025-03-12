@@ -8,6 +8,8 @@ Currently, all testing of rar.pas and rar_dll.pas is with them being included un
 
 updates, comments and suggestions welcome.
 
+My Extractor application (https://github.com/BazzaCuda/Extractor) contains a wrapper for 7z.dll. TRAR will be incorporated into that application at some point (primarily to support multi-volume RAR archives) and will therefore serve as the test project for TRAR.
+
 Of course, big thanks are due to Phillipe for his original 32-bit component, some 16 years ago!
 
 N.B. The code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll as appropriate.
