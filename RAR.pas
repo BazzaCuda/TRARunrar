@@ -41,7 +41,7 @@ uses
   RAR_DLL;
 
 type
-  TRAROperation = (roLoadDLL, roOpenArchive, roListFiles, roExtract, roTest);
+  TRAROperation = (roOpenArchive, roCloseArchive, roListFiles, roExtract, roTest);
 
 type
   TRARProgressInfo = record
@@ -113,7 +113,6 @@ type
 type
   TRAR = class(TComponent)
   private
-    FRARDLLInstance:        THandle;
     FAbort:                 boolean;
     FProgressInfo:          TRARProgressInfo;
     FReadMVToEnd:           boolean;
@@ -125,7 +124,6 @@ type
     FOpenArchiveDataEx:     TRAROpenArchiveDataEx;
     FArchiveHandle:         THandle;
     FHeaderDataEx:          TRARHeaderDataEx;
-    FDLLName:               string;
     FLastResult:            integer;
     FOnError:               TOnRARErrorNotifyEvent;
     FOnListFile:            TOnRARListFile;
@@ -140,8 +138,9 @@ type
     function  checkRARResult(const aResultCode:integer; const aOperation: TRAROperation): integer;
     function  getVersion:string;
     procedure onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
-    function  listArchiveFiles(aArchiveHandle: THANDLE; var aHeaderDataEx: TRARHeaderDataEx; var bAbort: boolean): boolean;
-    function  testArchiveFiles(aArchiveHandle: THANDLE; var aHeaderDataEx: TRARHeaderDataEx; var aProgressInfo: TRARProgressInfo; var bAbort: boolean): boolean;
+    function  listArchiveFiles(aArchiveHandle: THANDLE; var bAbort: boolean): boolean;
+    function  testArchiveFiles(aArchiveHandle: THANDLE; var aProgressInfo: TRARProgressInfo; var bAbort: boolean): boolean;
+    function  getDLLName: string;
   protected
   public
     constructor create(AOwner: TComponent); override;
@@ -150,9 +149,6 @@ type
     function  listFiles(const aFilePath: string): boolean;
     function  extractFiles(const aFilePath: AnsiString; bRestoreFolder: boolean; aFiles: TStrings):boolean;
     procedure abort;
-    function  loadDLL(const aDLLPath: string): THANDLE;
-    procedure unloadDLL;
-    function  isDLLLoaded:    boolean;
     function  getDLLVersion:  integer;
 
   public
@@ -164,7 +160,7 @@ type
     property readMultiVolumeToEnd:  boolean                   read FReadMVToEnd           write FReadMVToEnd; //if true, mv's will be read until last part of the file
     //pro: display correct crc + display all files in all parts
     //con: all volumes required means to open you have to insert all disk if not all volumes in same folder
-    property DLLName:               string                    read FDLLName               write FDLLName;
+    property DLLName:               string                    read getDLLName;
     property OnError:               TOnRARErrorNotifyEvent    read FOnError               write FOnError;
     property OnListFile:            TOnRARListFile            read FOnListFile            write FOnListFile;
     property OnPasswordRequired:    TOnRARPasswordRequired    read FOnPasswordRequired    write FOnPasswordRequired;
@@ -257,15 +253,12 @@ begin
   inherited create(AOwner);
 
   FReadMVToEnd        := FALSE;
-  FRARDLLInstance     := loadDLL({$IFDEF WIN32} 'UnRAR32.dll' {$ELSE} 'UnRAR64.dll' {$ENDIF});
-  case isDLLLoaded of FALSE: checkRARResult(RAR_DLL_LOAD_ERROR, roLoadDLL); end;
 //  FOnProgress         := onRARProgressTest;
 end;
 
 destructor TRAR.Destroy;
 begin
   if assigned(FComment) then freeMem(FComment);
-  unLoadDLL;
   inherited destroy;
 end;
 
@@ -346,7 +339,7 @@ end;
 
 function TRAR.closeArchive(aArchiveHandle: THANDLE): boolean;
 begin
-  case aArchiveHandle <> 0 of TRUE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roOpenArchive) = RAR_SUCCESS; end;
+  case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
 end;
 
 procedure TRAR.processHeader(aHeaderDataEx: TRARHeaderDataEx); // populate FArchiveInformation: TRARArchiveInformation and vFileItem: TRARFileItem from aHeaderDataEx
@@ -447,13 +440,15 @@ begin
   if assigned(FOnListFile) then FOnListFile(SELF, vFileItem);
 end;
 
-function TRAR.listArchiveFiles(aArchiveHandle: THANDLE; var aHeaderDataEx: TRARHeaderDataEx; var bAbort: boolean): boolean;
+function TRAR.listArchiveFiles(aArchiveHandle: THANDLE; var bAbort: boolean): boolean;
+
 begin
+  var vHeaderDataEx: TRARHeaderDataEx := default(TRARHeaderDataEx);
   try
     repeat
 
-      case checkRARResult(RARReadHeaderEx(aArchiveHandle, @FHeaderDataEx), roListFiles)     = RAR_SUCCESS of FALSE: EXIT; end;
-      processHeader(FHeaderDataEx);
+      case checkRARResult(RARReadHeaderEx(aArchiveHandle, @vHeaderDataEx), roListFiles)     = RAR_SUCCESS of FALSE: EXIT; end;
+      processHeader(vHeaderDataEx);
       case checkRARResult(RARProcessFile(aArchiveHandle, RAR_SKIP, NIL, NIL), roListFiles)  = RAR_SUCCESS of FALSE: EXIT; end;  // do nothing - skip to next file header
 
       application.processMessages;  // allow the user to actually press a cancel button
@@ -471,7 +466,7 @@ begin
   case vArchiveHandle  = RAR_INVALID_HANDLE of TRUE: EXIT; end;
   RARSetCallback(vArchivehandle, UnRarCallBack, LPARAM(pointer(SELF)));
   case FPassword = '' of FALSE: RARSetPassword(vArchiveHandle, PAnsiChar(FPassword)); end;
-  result := listArchiveFiles(vArchiveHandle, FHeaderDataEx, FAbort);
+  result := listArchiveFiles(vArchiveHandle, FAbort);
   closeArchive(vArchiveHandle);
 end;
 
@@ -583,18 +578,20 @@ begin
   if FAbort then result := FALSE;
 end;
 
-function TRAR.testArchiveFiles(aArchiveHandle: THANDLE; var aHeaderDataEx: TRARHeaderDataEx; var aProgressInfo: TRARProgressInfo; var bAbort: boolean): boolean;
+function TRAR.testArchiveFiles(aArchiveHandle: THANDLE; var aProgressInfo: TRARProgressInfo; var bAbort: boolean): boolean;
+var vHeaderDataEx: TRARHeaderDataEx;
 begin
   aProgressInfo := default(TRARProgressInfo);
 
   try
     repeat
 
-      case checkRARResult(RARReadHeaderEx(aArchiveHandle, @aHeaderDataEx), roTest)     = RAR_SUCCESS of FALSE: EXIT; end;
+      case checkRARResult(RARReadHeaderEx(aArchiveHandle, @vHeaderDataEx), roTest)     = RAR_SUCCESS of FALSE: EXIT; end;
+      processHeader(vHeaderDataEx);
 
       aProgressInfo.FileBytesDone   := 0;
-      aProgressInfo.FileBytesTotal  := aHeaderDataEx.UnpSize;
-      aProgressInfo.FileName        := aHeaderDataEx.FileNameW;
+      aProgressInfo.FileBytesTotal  := vHeaderDataEx.UnpSize;
+      aProgressInfo.FileName        := vHeaderDataEx.FileNameW;
 
       case checkRARResult(RARProcessFile(aArchiveHandle, RAR_TEST, NIL, NIL), roTest)  = RAR_SUCCESS of FALSE: EXIT; end;
 
@@ -608,55 +605,18 @@ end;
 
 function TRAR.testArchive(const aFilePath: string): boolean;
 begin
-  closeArchive(FArchiveHandle); // remove this now that FArchiveHandle will be vArchiveHandle
   FAbort := FALSE;
   var vArchiveHandle := openArchive(aFilePath, TRUE);
   case vArchiveHandle = RAR_INVALID_HANDLE of TRUE: EXIT; end;
   RARSetCallback(vArchivehandle, UnRarCallBack, LPARAM(pointer(SELF)));
   case FPassword = '' of FALSE: RARSetPassword(vArchiveHandle, PAnsiChar(FPassword)); end;
-  result := testArchiveFiles(vArchiveHandle, FHeaderDataEx, FProgressInfo, FAbort);
+  result := testArchiveFiles(vArchiveHandle, FProgressInfo, FAbort);
   closeArchive(vArchiveHandle);
 end;
 
-function TRAR.loadDLL(const aDLLPath: string): THANDLE;
+function TRAR.getDLLName: string;
 begin
-  FDLLName  := aDLLPath;
-  result    := loadLibrary({$IFDEF WIN32}PChar{$ELSE}PWideChar{$ENDIF}(aDLLPath));
-
-  case result = RAR_INVALID_HANDLE of TRUE: EXIT; end;
-
-  @RAROpenArchive         := GetProcAddress(result, 'RAROpenArchive');
-  @RAROpenArchiveEx       := GetProcAddress(result, 'RAROpenArchiveEx');
-  @RARCloseArchive        := GetProcAddress(result, 'RARCloseArchive');
-  @RARReadHeader          := GetProcAddress(result, 'RARReadHeader');
-  @RARReadHeaderEx        := GetProcAddress(result, 'RARReadHeaderEx');
-  @RARProcessFile         := GetProcAddress(result, 'RARProcessFile');
-  @RARProcessFileW        := GetProcAddress(result, 'RARProcessFileW');
-  @RARSetCallback         := GetProcAddress(result, 'RARSetCallback');
-  @RARSetChangeVolProc    := GetProcAddress(result, 'RARSetChangeVolProc');
-  @RARSetProcessDataProc  := GetProcAddress(result, 'RARSetProcessDataProc');
-  @RARSetPassword         := GetProcAddress(result, 'RARSetPassword');
-  @RARGetDllVersion       := GetProcAddress(result, 'RARGetDllVersion');
-
-  if (@RAROpenArchive = NIL) or (@RAROpenArchiveEx    = NIL) or (@RARCloseArchive = NIL)
-  or (@RARReadHeader  = NIL) or (@RARReadHeaderEx     = NIL) or (@RARProcessFile = NIL) or (@RARProcessFileW = NIL)
-  or (@RARSetCallback = NIL) or (@RARSetChangeVolProc = NIL) or (@RARSetProcessDataProc = NIL)
-  or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL)
-  then unloadDLL
-  else if RARGetDllVersion < RAR_MIN_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'error', 0);
-end;
-
-procedure TRAR.unloadDLL;
-begin
-  if isDLLLoaded then begin
-    freeLibrary(FRARDLLInstance);
-    FRARDLLInstance := 0;
-  end;
-end;
-
-function TRAR.isDLLLoaded: boolean;
-begin
-  result := FRARDLLInstance <> RAR_INVALID_HANDLE;
+  result := RARDLLName;
 end;
 
 function TRAR.getDLLVersion: integer;

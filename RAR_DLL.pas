@@ -204,8 +204,38 @@ var
 function getFileModifyDate(const fileName: string): TDateTime;
 function getFileSize(const s: string): int64;
 function isSFX(const fileName:String): boolean;
+function RARDLLName: string;
 
 implementation
+
+type
+  IDLL = interface
+  ['{59866286-8FC9-4044-AF9E-712E53744112}']
+    function dllName: string;
+  end;
+
+  TDLL = class(TInterfacedObject, IDLL)
+  strict private
+    FRARDLLInstance:  THandle;
+    FDLLName:         string;
+  private
+    function  loadDLL(const aDLLPath: string): THANDLE;
+    procedure unloadDLL;
+    function  isDLLLoaded: boolean;
+   protected
+    constructor create;
+    destructor  destroy;
+   public
+     function dllName: string;
+  end;
+
+var
+  GDLL: IDLL;
+
+function RARDLLName: string;
+begin
+  result := GDLL.dllName;
+end;
 
 function getFileModifyDate(const fileName:string): TDateTime;
 var
@@ -259,5 +289,71 @@ begin
   else
     result := FALSE;
 end;
+
+{ TDLL }
+
+constructor TDLL.create;
+begin
+  inherited create;
+  FRARDLLInstance := loadDLL({$IFDEF WIN32} 'UnRAR32.dll' {$ELSE} 'UnRAR64.dll' {$ENDIF});
+  case FRARDLLInstance = RAR_INVALID_HANDLE of TRUE:  begin
+                                                        messageBox(0, 'unable to load DLL', 'Error', MB_ICONSTOP or MB_OK);
+                                                        HALT;
+                                                      end;end;
+end;
+
+function TDLL.loadDLL(const aDLLPath: string): THANDLE;
+begin
+  FDLLName  := aDLLPath;
+  result    := loadLibrary({$IFDEF WIN32}PChar{$ELSE}PWideChar{$ENDIF}(aDLLPath));
+
+  case result = RAR_INVALID_HANDLE of TRUE: EXIT; end;
+
+  @RAROpenArchive         := GetProcAddress(result, 'RAROpenArchive');
+  @RAROpenArchiveEx       := GetProcAddress(result, 'RAROpenArchiveEx');
+  @RARCloseArchive        := GetProcAddress(result, 'RARCloseArchive');
+  @RARReadHeader          := GetProcAddress(result, 'RARReadHeader');
+  @RARReadHeaderEx        := GetProcAddress(result, 'RARReadHeaderEx');
+  @RARProcessFile         := GetProcAddress(result, 'RARProcessFile');
+  @RARProcessFileW        := GetProcAddress(result, 'RARProcessFileW');
+  @RARSetCallback         := GetProcAddress(result, 'RARSetCallback');
+  @RARSetChangeVolProc    := GetProcAddress(result, 'RARSetChangeVolProc');
+  @RARSetProcessDataProc  := GetProcAddress(result, 'RARSetProcessDataProc');
+  @RARSetPassword         := GetProcAddress(result, 'RARSetPassword');
+  @RARGetDllVersion       := GetProcAddress(result, 'RARGetDllVersion');
+
+  if (@RAROpenArchive = NIL) or (@RAROpenArchiveEx    = NIL) or (@RARCloseArchive = NIL)
+  or (@RARReadHeader  = NIL) or (@RARReadHeaderEx     = NIL) or (@RARProcessFile = NIL) or (@RARProcessFileW = NIL)
+  or (@RARSetCallback = NIL) or (@RARSetChangeVolProc = NIL) or (@RARSetProcessDataProc = NIL)
+  or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL)
+  then unloadDLL
+  else if RARGetDllVersion < RAR_MIN_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'error', 0);
+end;
+
+destructor TDLL.destroy;
+begin
+  unloadDLL;
+end;
+
+function TDLL.dllName: string;
+begin
+  result := FDLLName;
+end;
+
+function TDLL.isDLLLoaded: boolean;
+begin
+  result := FRARDLLInstance <> RAR_INVALID_HANDLE;
+end;
+
+procedure TDLL.unloadDLL;
+begin
+  if isDLLLoaded then begin
+    freeLibrary(FRARDLLInstance);
+    FRARDLLInstance := 0;
+  end;
+end;
+
+initialization
+  GDLL := TDLL.create;
 
 end.
