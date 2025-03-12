@@ -9,3 +9,5 @@ Currently, all testing of rar.pas and rar_dll.pas is with them being included un
 updates, comments and suggestions welcome.
 
 Of course, big thanks are due to Phillipe for his original 32-bit component, some 16 years ago!
+
+N.B. The code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll as appropriate.
