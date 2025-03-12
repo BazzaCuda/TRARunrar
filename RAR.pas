@@ -11,6 +11,7 @@
 //  - each file's checksum (e.g. Blake2) is now accessible
 //  - support for WideChar filenames in archives
 //  - reformatted the code and added significant amounts of whitespace for enhanced readability
+//  - completely refactored
 //  - started a GoFundMe page to buy Philippe a keyboard with a space bar :D
 //
 //  changes in 1.2 stable
@@ -27,7 +28,7 @@
 //
 //  known bugs:
 //   - when extracting files that contains unicode characters there's no test if
-//     the file exists allready
+//     the file exists already
 //   - open archives that contains unicode characters in the archive name fails
 
 unit RAR;
@@ -40,7 +41,7 @@ uses
   RAR_DLL;
 
 type
-  TRAROperation = (roInitArchive, roListFiles, roExtract, roTest);
+  TRAROperation = (roLoadDLL, roOpenArchive, roListFiles, roExtract, roTest);
 
 type
   TRARProgressInfo = record
@@ -121,7 +122,7 @@ type
     FComment:               PAnsiChar;
     FCommentResult:         cardinal;
     FArchiveInformation:    TRARArchiveInformation;
-    FArchiveDataEx:         TRARArchiveDataEx;
+    FOpenArchiveDataEx:     TRAROpenArchiveDataEx;
     FArchiveHandle:         THandle;
     FHeaderDataEx:          TRARHeaderDataEx;
     FDLLName:               string;
@@ -132,11 +133,11 @@ type
     FOnNextVolumeRequired:  TOnRARNextVolumeRequired;
     FOnProgress:            TOnRARProgress;
     FOnReplace:             TOnRARReplace;
-    function  initArchive(bExtract: boolean): boolean;
+    function  openArchive(const aFilePath: string; bExtract: boolean): THANDLE;
     function  closeArchive(aArchiveHandle: THANDLE): boolean;
     function  onUnRarCallBack(msg: cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
     procedure processHeader(aHeaderDataEx: TRARHeaderDataEx);
-    function  checkRARResult(aErrorCode:integer; aOperation: TRAROperation): integer;
+    function  checkRARResult(const aResultCode:integer; const aOperation: TRAROperation): integer;
     function  getVersion:string;
     procedure onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
     function  listArchiveFiles(aArchiveHandle: THANDLE; var aHeaderDataEx: TRARHeaderDataEx; var bAbort: boolean): boolean;
@@ -146,15 +147,18 @@ type
     constructor create(AOwner: TComponent); override;
     destructor  destroy; override;
 
-    function  openArchive(aFileName:string): boolean;
-    function  listFiles: boolean;
-    function  extractFiles(aPath: AnsiString; bRestoreFolder: boolean; aFiles: TStrings):boolean;
-    function  testArchive: boolean;
+    function  listFiles(const aFilePath: string): boolean;
+    function  extractFiles(const aFilePath: AnsiString; bRestoreFolder: boolean; aFiles: TStrings):boolean;
     procedure abort;
-    procedure loadDLL;
+    function  loadDLL(const aDLLPath: string): THANDLE;
     procedure unloadDLL;
-    function  isDLLLoaded: boolean;
-    function  getDllVersion:integer;
+    function  isDLLLoaded:    boolean;
+    function  getDLLVersion:  integer;
+
+  public
+    function  listArchive(const aFilePath:string):  boolean;
+    function  testArchive(const aFilePath:string):  boolean;
+
   published
     property version: string read getVersion;
     property readMultiVolumeToEnd:  boolean                   read FReadMVToEnd           write FReadMVToEnd; //if true, mv's will be read until last part of the file
@@ -179,9 +183,6 @@ uses
 
 const
   GVersion='2.0';
-
-  RAR_CANCEL   = -1;
-  RAR_CONTINUE =  0;
 
 procedure Register;
 begin
@@ -256,7 +257,8 @@ begin
   inherited create(AOwner);
 
   FReadMVToEnd        := FALSE;
-  FDLLName            := {$IFDEF WIN32} 'UnRAR32.dll' {$ELSE} 'UnRAR64.dll' {$ENDIF};
+  FRARDLLInstance     := loadDLL({$IFDEF WIN32} 'UnRAR32.dll' {$ELSE} 'UnRAR64.dll' {$ENDIF});
+  case isDLLLoaded of FALSE: checkRARResult(RAR_DLL_LOAD_ERROR, roLoadDLL); end;
 //  FOnProgress         := onRARProgressTest;
 end;
 
@@ -267,29 +269,24 @@ begin
   inherited destroy;
 end;
 
-function TRAR.openArchive(aFileName: string): boolean;
+function TRAR.listArchive(const aFilePath: string): boolean;
 begin
-  FArchiveInformation := default(TRARArchiveInformation);
-
-  if NOT isDLLLoaded then loadDLL;
-  if NOT isDLLLoaded then begin
-    checkRARResult(ERAR_DLL_LOAD_ERROR, roInitArchive);
-    result := FALSE;
-    Exit;
-  end;
-
-  FArchiveInformation.FileName  := aFileName;
-  FArchiveInformation.Opened    := TRUE;
-  result                        := listFiles;
+  result := listFiles(aFilePath);
 end;
 
-function TRAR.initArchive(bExtract: boolean): boolean;
+function TRAR.openArchive(const aFilePath: string; bExtract: boolean): THANDLE;
 begin
 //  debug('initArchive');
-  result          := TRUE;
+  FArchiveInformation := default(TRARArchiveInformation);
+
+  FArchiveInformation.FileName  := aFilePath;
+  FArchiveInformation.Opened    := TRUE;
+
+  result          := 0;
   FCommentResult  := RAR_SUCCESS;
 
-  with FArchiveDataEx do begin
+  FOpenArchiveDataEx := default(TRAROpenArchiveDataEx);
+  with FOpenArchiveDataEx do begin
     OpenResult := RAR_SUCCESS;
     if bExtract
     then
@@ -302,57 +299,54 @@ begin
 
     ArcName := PAnsiChar(FArchiveInformation.FileName);
 
-    if NOT Assigned(FComment) then getMem(FComment, MAX_RAR_COMMENTSIZE);
+    if NOT Assigned(FComment) then getMem(FComment, RAR_MAX_COMMENT_SIZE);
     CmtBuf      := FComment;
-    CmtBufSize  := MAX_RAR_COMMENTSIZE;
+    CmtBufSize  := RAR_MAX_COMMENT_SIZE;
     CmtSize     := length(FComment);
     CmtState    := FCommentResult;
   end;
 
-  FArchiveHandle := RAROpenArchiveEx(@FArchiveDataEx);
-//  ArchiveHandle:=RAROpenArchive(@ArchiveData);
-  if FArchiveHandle = 0 then begin           //handle incorrect = failed to load dll
-    checkRARResult(ERAR_DLL_LOAD_ERROR, roInitArchive);
-    result := FALSE;
-    EXIT;
-  end;
+  result := RAROpenArchiveEx(@FOpenArchiveDataEx);
+  case result = RAR_INVALID_HANDLE of TRUE: begin
+                                              checkRARResult(ERAR_EOPEN, roOpenArchive);
+                                              EXIT; end;end;
+
 
   //((ArchiveData.Flags and $00000100)=$00000100)=first volume
   //((ArchiveData.Flags and $00000001)=$00000001)=Volume attribute (archive volume)
   //((ArchiveData.Flags and $00000010)=$00000010)=New volume naming scheme ('volname.partN.rar')
 
   //set archive info
-  if ((FArchiveDataEx.Flags AND $00000004) = $00000004) then FArchiveInformation.Locked           := TRUE;
-  if ((FArchiveDataEx.Flags AND $00000020) = $00000020) then FArchiveInformation.Signed           := TRUE;
-  if ((FArchiveDataEx.Flags AND $00000040) = $00000040) then FArchiveInformation.Recovery         := TRUE;
-  if ((FArchiveDataEx.Flags AND $00000008) = $00000008) then FArchiveInformation.Solid            := TRUE;
-  if ((FArchiveDataEx.Flags AND $00000002) = $00000002) then FArchiveInformation.ArchiveComment   := TRUE;
-  if ((FArchiveDataEx.Flags AND $00000080) = $00000080) then FArchiveInformation.HeaderEncrypted  := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000004) = $00000004) then FArchiveInformation.Locked           := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000020) = $00000020) then FArchiveInformation.Signed           := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000040) = $00000040) then FArchiveInformation.Recovery         := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000008) = $00000008) then FArchiveInformation.Solid            := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000002) = $00000002) then FArchiveInformation.ArchiveComment   := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000080) = $00000080) then FArchiveInformation.HeaderEncrypted  := TRUE;
 
   FArchiveInformation.SFX := isSFX(FArchiveInformation.FileName);
 
-  case FArchiveDataEx.CmtState of //read archive comment
-    ERAR_COMMENTS_EXISTS: begin
+  case FOpenArchiveDataEx.CmtState of //read archive comment
+    RAR_COMMENT_EXISTS:   begin
                             FArchiveInformation.Comment        := strPas(FComment);
                             FArchiveInformation.ArchiveComment := TRUE;
                           end;
-    ERAR_NO_COMMENTS:     begin
+    RAR_NO_COMMENT:       begin
                             FArchiveInformation.Comment        := '';
                             FArchiveInformation.ArchiveComment := FALSE;
                           end;
-    ERAR_NO_MEMORY:       checkRARResult(ERAR_NO_MEMORY,       roInitArchive);
-    ERAR_BAD_DATA:        checkRARResult(ERAR_BAD_DATA,        roInitArchive);
-    ERAR_UNKNOWN_FORMAT:  checkRARResult(ERAR_UNKNOWN_FORMAT,  roInitArchive);
-    ERAR_SMALL_BUF:       checkRARResult(ERAR_SMALL_BUF,       roInitArchive);
+    ERAR_NO_MEMORY:       checkRARResult(ERAR_NO_MEMORY,       roOpenArchive);
+    ERAR_BAD_DATA:        checkRARResult(ERAR_BAD_DATA,        roOpenArchive);
+    ERAR_UNKNOWN_FORMAT:  checkRARResult(ERAR_UNKNOWN_FORMAT,  roOpenArchive);
+    ERAR_SMALL_BUF:       checkRARResult(ERAR_SMALL_BUF,       roOpenArchive);
   end;
 
-  if (FArchiveDataEx.CmtState <> ERAR_NO_COMMENTS) and (FArchiveDataEx.CmtState <> ERAR_COMMENTS_EXISTS) then result := FALSE;      //error reading comment
+  case FOpenArchiveDataEx.cmtState in [RAR_NO_COMMENT, RAR_COMMENT_EXISTS] of FALSE: checkRARResult(RAR_COMMENT_UNKNOWN, roOpenArchive); end // unknown comment condition
 end;
 
 function TRAR.closeArchive(aArchiveHandle: THANDLE): boolean;
 begin
-  result := checkRARResult(RARCloseArchive(aArchiveHandle), roInitArchive) = RAR_SUCCESS;
-  FArchiveHandle := 0;
+  case aArchiveHandle <> 0 of TRUE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roOpenArchive) = RAR_SUCCESS; end;
 end;
 
 procedure TRAR.processHeader(aHeaderDataEx: TRARHeaderDataEx); // populate FArchiveInformation: TRARArchiveInformation and vFileItem: TRARFileItem from aHeaderDataEx
@@ -470,15 +464,15 @@ begin
   end;
 end;
 
-function TRAR.listFiles: boolean;
+function TRAR.listFiles(const aFilePath: string): boolean;
 begin
-  closeArchive(FArchiveHandle);
   FAbort := FALSE;
-  case initArchive(FALSE) of FALSE: EXIT; end;
-  RARSetCallback(FArchivehandle, UnRarCallBack, LPARAM(pointer(SELF)));
-  case FPassword = '' of FALSE: RARSetPassword(FArchiveHandle, PAnsiChar(FPassword)); end;
-  result := listArchiveFiles(FArchiveHandle, FHeaderDataEx, FAbort);
-  closeArchive(FArchiveHandle);
+  var vArchiveHandle := openArchive(aFilePath, FALSE);
+  case vArchiveHandle  = RAR_INVALID_HANDLE of TRUE: EXIT; end;
+  RARSetCallback(vArchivehandle, UnRarCallBack, LPARAM(pointer(SELF)));
+  case FPassword = '' of FALSE: RARSetPassword(vArchiveHandle, PAnsiChar(FPassword)); end;
+  result := listArchiveFiles(vArchiveHandle, FHeaderDataEx, FAbort);
+  closeArchive(vArchiveHandle);
 end;
 
 function extractFile(aFileName: string; aFiles: TStrings): boolean; // returns whether or not the actual file should be extracted
@@ -496,7 +490,7 @@ begin
         end;
 end;
 
-function TRAR.ExtractFiles(aPath: AnsiString; bRestoreFolder: boolean; aFiles:TStrings):boolean;
+function TRAR.extractFiles(const aFilePath: AnsiString; bRestoreFolder: boolean; aFiles:TStrings): boolean;
 var
   vReadFileHeaderResult:  integer;
   vExistentFile:          TRARReplaceData;
@@ -505,12 +499,11 @@ var
   st:                     TSystemTime;
   vReplaceResult:         TRARReplace;
 begin
-  assert(fileExists(FArchiveInformation.FileName));
   FAbort := FALSE;
-  result := initArchive(TRUE);
+  result := openArchive(aFilePath, TRUE) <> RAR_INVALID_HANDLE;
   if FAbort or NOT (result) then EXIT;
 
-  if aPath[Length(aPath)] <> '\' then aPath := aPath+'\';
+//  if aFilePath[Length(aFilePath)] <> '\' then aFilePath := aFilePath+'\';
   FProgressInfo := default(TRARProgressInfo); // reset all counts to zero
 
   try
@@ -538,9 +531,9 @@ begin
       if extractFile(strPas(FHeaderDataEx.FileName), aFiles) then begin    //todo: UniCode FileName
 
         if bRestoreFolder then
-          vExistentFile.FileName  := aPath + strPas(FHeaderDataEx.FileName)
+          vExistentFile.FileName  := aFilePath + strPas(FHeaderDataEx.FileName)
         else
-          vExistentFile.FileName  := aPath + extractFileName(strPas(FHeaderDataEx.FileName));
+          vExistentFile.FileName  := aFilePath + extractFileName(strPas(FHeaderDataEx.FileName));
 
         vExistentFile.Size := getFileSize(vExistentFile.FileName);
         vExistentFile.Time := getFileModifyDate(vExistentFile.FileName);
@@ -563,12 +556,12 @@ begin
           rrCancel:     FAbort := TRUE;
           rrOverwrite:  if bRestoreFolder
                         then
-                          vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_EXTRACT, PAnsiChar(aPath), NIL)
+                          vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_EXTRACT, PAnsiChar(aFilePath), NIL)
                         else
                         if (NOT ((FHeaderDataEx.Flags AND $00000070) = $00000070)) and (FHeaderDataEx.FileAttr <> faDirectory) then
                           vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_EXTRACT, Nil, PAnsiChar(vExistentFile.FileName));
           rrSkip:       begin
-                          vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_SKIP, PAnsiChar(aPath), NIL);
+                          vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_SKIP, PAnsiChar(aFilePath), NIL);
                           {$WARN COMBINING_SIGNED_UNSIGNED OFF}
                           FProgressInfo.ArchiveBytesDone := FProgressInfo.ArchiveBytesDone + FHeaderDataEx.UnpSize;
                           {$WARN COMBINING_SIGNED_UNSIGNED ON}
@@ -613,43 +606,44 @@ begin
   end;
 end;
 
-function TRAR.testArchive: boolean;
+function TRAR.testArchive(const aFilePath: string): boolean;
 begin
-  closeArchive(FArchiveHandle);
+  closeArchive(FArchiveHandle); // remove this now that FArchiveHandle will be vArchiveHandle
   FAbort := FALSE;
-  case initArchive(TRUE) of FALSE: EXIT; end;
-  RARSetCallback(FArchivehandle, UnRarCallBack, LPARAM(pointer(SELF)));
-  case FPassword = '' of FALSE: RARSetPassword(FArchiveHandle, PAnsiChar(FPassword)); end;
-  result := testArchiveFiles(FArchiveHandle, FHeaderDataEx, FProgressInfo, FAbort);
-  closeArchive(FArchiveHandle);
+  var vArchiveHandle := openArchive(aFilePath, TRUE);
+  case vArchiveHandle = RAR_INVALID_HANDLE of TRUE: EXIT; end;
+  RARSetCallback(vArchivehandle, UnRarCallBack, LPARAM(pointer(SELF)));
+  case FPassword = '' of FALSE: RARSetPassword(vArchiveHandle, PAnsiChar(FPassword)); end;
+  result := testArchiveFiles(vArchiveHandle, FHeaderDataEx, FProgressInfo, FAbort);
+  closeArchive(vArchiveHandle);
 end;
 
-procedure TRAR.loadDLL;
+function TRAR.loadDLL(const aDLLPath: string): THANDLE;
 begin
-  FRARDLLInstance := loadLibrary({$IFDEF WIN32}PChar{$ELSE}PWideChar{$ENDIF}(FDLLName));
+  FDLLName  := aDLLPath;
+  result    := loadLibrary({$IFDEF WIN32}PChar{$ELSE}PWideChar{$ENDIF}(aDLLPath));
 
-  case FRARDLLInstance = 0 of TRUE: EXIT; end;
+  case result = RAR_INVALID_HANDLE of TRUE: EXIT; end;
 
-  @RAROpenArchive         := GetProcAddress(FRARDLLInstance, 'RAROpenArchive');
-  @RAROpenArchiveEx       := GetProcAddress(FRARDLLInstance, 'RAROpenArchiveEx');
-  @RARCloseArchive        := GetProcAddress(FRARDLLInstance, 'RARCloseArchive');
-  @RARReadHeader          := GetProcAddress(FRARDLLInstance, 'RARReadHeader');
-  @RARReadHeaderEx        := GetProcAddress(FRARDLLInstance, 'RARReadHeaderEx');
-  @RARProcessFile         := GetProcAddress(FRARDLLInstance, 'RARProcessFile');
-  @RARSetCallback         := GetProcAddress(FRARDLLInstance, 'RARSetCallback');
-  @RARSetChangeVolProc    := GetProcAddress(FRARDLLInstance, 'RARSetChangeVolProc');
-  @RARSetProcessDataProc  := GetProcAddress(FRARDLLInstance, 'RARSetProcessDataProc');
-  @RARSetPassword         := GetProcAddress(FRARDLLInstance, 'RARSetPassword');
-  @RARGetDllVersion       := GetProcAddress(FRARDLLInstance, 'RARGetDllVersion');
+  @RAROpenArchive         := GetProcAddress(result, 'RAROpenArchive');
+  @RAROpenArchiveEx       := GetProcAddress(result, 'RAROpenArchiveEx');
+  @RARCloseArchive        := GetProcAddress(result, 'RARCloseArchive');
+  @RARReadHeader          := GetProcAddress(result, 'RARReadHeader');
+  @RARReadHeaderEx        := GetProcAddress(result, 'RARReadHeaderEx');
+  @RARProcessFile         := GetProcAddress(result, 'RARProcessFile');
+  @RARProcessFileW        := GetProcAddress(result, 'RARProcessFileW');
+  @RARSetCallback         := GetProcAddress(result, 'RARSetCallback');
+  @RARSetChangeVolProc    := GetProcAddress(result, 'RARSetChangeVolProc');
+  @RARSetProcessDataProc  := GetProcAddress(result, 'RARSetProcessDataProc');
+  @RARSetPassword         := GetProcAddress(result, 'RARSetPassword');
+  @RARGetDllVersion       := GetProcAddress(result, 'RARGetDllVersion');
 
   if (@RAROpenArchive = NIL) or (@RAROpenArchiveEx    = NIL) or (@RARCloseArchive = NIL)
-  or (@RARReadHeader  = NIL) or (@RARReadHeaderEx     = NIL) or (@RARProcessFile = NIL)
+  or (@RARReadHeader  = NIL) or (@RARReadHeaderEx     = NIL) or (@RARProcessFile = NIL) or (@RARProcessFileW = NIL)
   or (@RARSetCallback = NIL) or (@RARSetChangeVolProc = NIL) or (@RARSetProcessDataProc = NIL)
-  or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL) then begin
-                                                                    FRARDLLInstance := 0;
-                                                                    unloadDLL;
-                                                                  end
-  else if RARGetDllVersion < MIN_RAR_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'error', 0);
+  or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL)
+  then unloadDLL
+  else if RARGetDllVersion < RAR_MIN_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'error', 0);
 end;
 
 procedure TRAR.unloadDLL;
@@ -657,23 +651,16 @@ begin
   if isDLLLoaded then begin
     freeLibrary(FRARDLLInstance);
     FRARDLLInstance := 0;
-    FArchiveHandle  := 0;
   end;
 end;
 
-function TRAR.isDLLLoaded:boolean;
+function TRAR.isDLLLoaded: boolean;
 begin
-  result := FRARDLLInstance <> 0;
+  result := FRARDLLInstance <> RAR_INVALID_HANDLE;
 end;
 
-function TRAR.GetDLLVersion:integer;
+function TRAR.getDLLVersion: integer;
 begin
-  if NOT isDLLLoaded then LoadDLL;
-  if NOT isDLLLoaded then begin
-    checkRARResult(ERAR_DLL_LOAD_ERROR, roInitArchive);
-    result := 0;
-    EXIT;
-  end;
   result := RARGetDLLVersion;
 end;
 
@@ -682,25 +669,25 @@ begin
   FAbort := TRUE;
 end;
 
-function TRAR.checkRARResult(aErrorCode: integer; aOperation: TRAROperation): integer;
+function TRAR.checkRARResult(const aResultCode: integer; const aOperation: TRAROperation): integer;
 begin
-  result      := aErrorCode;
-  FLastResult := aErrorCode;
+  result      := aResultCode;
+  FLastResult := aResultCode;
 
-  FAbort := (aErrorCode = ERAR_DLL_LOAD_ERROR)
-//  or (ErrorCode=ERAR_END_ARCHIVE) = 10
-  or (aErrorCode = ERAR_NO_MEMORY)
-  or (aErrorCode = ERAR_BAD_DATA)
-  or (aErrorCode = ERAR_UNKNOWN_FORMAT)
-  or (aErrorCode = ERAR_EOPEN)
-  or (aErrorCode = ERAR_ECREATE)
-  or (aErrorCode = ERAR_ECLOSE)
-  or (aErrorCode = ERAR_EREAD)
-  or (aErrorCode = ERAR_EWRITE)
-  or (aErrorCode = ERAR_SMALL_BUF)
-  or (aErrorCode = ERAR_UNKNOWN);
+  FAbort := (aResultCode = RAR_DLL_LOAD_ERROR)
+//  or (ResultCode=ERAR_END_ARCHIVE) = 10
+  or (aResultCode = ERAR_NO_MEMORY)
+  or (aResultCode = ERAR_BAD_DATA)
+  or (aResultCode = ERAR_UNKNOWN_FORMAT)
+  or (aResultCode = ERAR_EOPEN)
+  or (aResultCode = ERAR_ECREATE)
+  or (aResultCode = ERAR_ECLOSE)
+  or (aResultCode = ERAR_EREAD)
+  or (aResultCode = ERAR_EWRITE)
+  or (aResultCode = ERAR_SMALL_BUF)
+  or (aResultCode = ERAR_UNKNOWN);
 
-  case FAbort and assigned(FOnError) of TRUE: FOnError(SELF, aErrorCode, aOperation); end;
+  case (FAbort or (aResultCode = RAR_COMMENT_UNKNOWN)) and assigned(FOnError) of TRUE: FOnError(SELF, aResultCode, aOperation); end;
 end;
 
 function TRAR.getVersion: string;

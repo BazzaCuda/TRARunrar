@@ -11,6 +11,7 @@
 //  - each file's checksum (e.g. Blake2) is now accessible
 //  - support for WideChar filenames in archives
 //  - reformatted the code and added significant amounts of whitespace for enhanced readability
+//  - completely refactored
 //  - started a GoFundMe page to buy Philippe a keyboard with a space bar :D
 //
 //  changes in 1.2 stable
@@ -27,7 +28,7 @@
 //
 //  known bugs:
 //   - when extracting files that contains unicode characters there's no test if
-//     the file exists allready
+//     the file exists already
 //   - open archives that contains unicode characters in the archive name fails
 
 unit RAR_DLL;
@@ -46,9 +47,6 @@ const
   RAR_METHOD_BEST       = 53;
 
   RAR_SUCCESS           =  0;
-  ERAR_COMMENTS_EXISTS  =  1;
-  ERAR_NO_COMMENTS      =  0;
-  ERAR_DLL_LOAD_ERROR   = 99;
   ERAR_END_ARCHIVE      = 10;
   ERAR_NO_MEMORY        = 11;
   ERAR_BAD_DATA         = 12;
@@ -61,23 +59,40 @@ const
   ERAR_EWRITE           = 19;
   ERAR_SMALL_BUF        = 20;
   ERAR_UNKNOWN          = 21;
+  ERAR_MISSING_PASSWORD = 22;
+  ERAR_EREFERENCE       = 23;
+  ERAR_BAD_PASSWORD     = 24;
+  ERAR_LARGE_DICT       = 25;
 
   RAR_OM_LIST           =  0;
   RAR_OM_EXTRACT        =  1;
   RAR_OM_LIST_INCSPLIT  =  2;
+
   RAR_SKIP              =  0;
   RAR_TEST              =  1;
   RAR_EXTRACT           =  2;
+
   RAR_VOL_ASK           =  0;
   RAR_VOL_NOTIFY        =  1;
+
   RAR_DLL_VERSION       =  3;
+
+//
+  RAR_COMMENT_EXISTS    =  1;
+  RAR_NO_COMMENT        =  0;
+  RAR_COMMENT_UNKNOWN   = 98;
+  RAR_DLL_LOAD_ERROR    = 99;
+  RAR_INVALID_HANDLE    =  0;
 
   UCM_CHANGEVOLUME      =  0;
   UCM_PROCESSDATA       =  1;
   UCM_NEEDPASSWORD      =  2;
 
-  MAX_RAR_COMMENTSIZE   = 65536;
-  MIN_RAR_VERSION       =  4;
+  RAR_MAX_COMMENT_SIZE  = 65536;
+  RAR_MIN_VERSION       =  4;
+
+  RAR_CANCEL            = -1;
+  RAR_CONTINUE          =  0;
 
 type
   TProcessDataProc  = function(Addr: PByte; Size: integer): integer;
@@ -149,28 +164,29 @@ type
   PRAROpenArchiveData = ^TRAROpenArchiveData;
 
   {$ALIGN 1}
-  TRARArchiveDataEx = record
-    ArcName:    PAnsiChar;
-    ArcNameW:   PWideChar;
-    OpenMode:   cardinal;
-    OpenResult: cardinal;
-    CmtBuf:     PAnsiChar;
-    CmtBufSize: cardinal;
-    CmtSize:    cardinal;
-    CmtState:   cardinal;
-    Flags:      cardinal;
-    Callback:   cardinal;
-    LParam:     cardinal;
-    OpFlags:    cardinal;
-    CmtBufW:    PWideChar;
-    Reserved:   array[1..25] of cardinal;
+  TRAROpenArchiveDataEx = record
+    ArcName:      PAnsiChar;
+    ArcNameW:     PWideChar;
+    OpenMode:     cardinal;
+    OpenResult:   cardinal;
+    CmtBuf:       PAnsiChar;
+    CmtBufSize:   cardinal;
+    CmtSize:      cardinal;
+    CmtState:     cardinal;
+    Flags:        cardinal;
+    Callback:     cardinal;
+    LParam:       cardinal;
+    OpFlags:      cardinal;
+    CmtBufW:      PWideChar;
+    MarkOfTheWeb: PWideChar;
+    Reserved:   array[1..23] of cardinal;
   end;
   {$A-} // Reset alignment to default
-  PRARArchiveDataEx = ^TRARArchiveDataEx;
+  PRAROpenArchiveDataEx = ^TRAROpenArchiveDataEx;
 
 var
-  RAROpenArchive:         function  (ArchiveData: PRAROpenArchiveData): THandle;                                                  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
-  RAROpenArchiveEx:       function  (ArchiveData: PRARArchiveDataEx):   THandle;                                                  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+  RAROpenArchive:         function  (ArchiveData: PRAROpenArchiveData):   THandle;                                                {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+  RAROpenArchiveEx:       function  (ArchiveData: PRAROpenArchiveDataEx): THandle;                                                {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
   RARCloseArchive:        function  (hArcData: THandle):                                                                integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   RARReadHeader:          function  (hArcData: THandle; HeaderData: PRARHeaderData):                                    integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
