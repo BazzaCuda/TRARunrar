@@ -222,7 +222,7 @@ begin
                                               if assigned(FOnNextVolumeRequired) then FOnNextVolumeRequired(SELF, PAnsiChar(P1), vFileName, vCancel);
                                               strPCopy(PAnsiChar(P1), vFileName); //todo: handle error if P1 has NOT enough space for FileName
                                               if FAbort or vCancel then result := RAR_CANCEL; end; end;
-                          RAR_VOL_NOTIFY: result := 0; // continue. occurs when next volume required and next part was found
+                          RAR_VOL_NOTIFY: result := RAR_CONTINUE; // occurs when next volume required and next part was found
                         end;
                       end;
 
@@ -370,7 +370,7 @@ var
       result[i * 2 + 1] := lowerCase(intToHex(bin[i], 2))[1];
       result[i * 2 + 2] := lowerCase(intToHex(bin[i], 2))[2];
     end;
-    {$IFDEF Win64} setLength(result, length(result) - 8); {$ENDIF}
+//    {$IFDEF Win64} setLength(result, length(result) - 8); {$ENDIF}
   end;
 
 begin
