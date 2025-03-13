@@ -176,7 +176,7 @@ type
 //
     flags:        cardinal;
     callback:     cardinal;
-    userData:     LPARAM;
+    userData:     cardinal;
     opFlags:      cardinal;
     cmtBufW:      PWideChar;
     markOfTheWeb: PWideChar;
