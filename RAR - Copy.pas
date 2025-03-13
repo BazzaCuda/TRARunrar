@@ -45,36 +45,35 @@ type
 
 type
   TRARProgressInfo = record
-    fileName:           WideString;
-    archiveBytesTotal:  LongInt;
-    archiveBytesDone:   LongInt;
-    fileBytesTotal:     LongInt;
-    fileBytesDone:      LongInt;
+    FileName:           WideString;
+    ArchiveBytesTotal:  LongInt;
+    ArchiveBytesDone:   LongInt;
+    FileBytesTotal:     LongInt;
+    FileBytesDone:      LongInt;
   end;
 
 type
   TRARFileItem = record
-    // derived from processFileHeader(aHeaderDataEx: TRARHeaderDataEx)
-    fileName:             AnsiString;
-    fileNameW:            WideString;
-    compressedSize:       cardinal;
-    unCompressedSize:     cardinal;
-    hostOS:               string;
+    FileName:             AnsiString;
+    FileNameW:            WideString;
+    CompressedSize:       cardinal;
+    UnCompressedSize:     cardinal;
+    HostOS:               string;
     CRC32:                string;
-    attributes:           cardinal;
-    comment:              Ansistring;
-    time:                 TDateTime;
-    compressionStrength:  cardinal;
-    archiverVersion:      cardinal;
-    encrypted:            boolean;
-    blake2:               string; // Baz
+    Attributes:           cardinal;
+    Comment:              Ansistring;
+    Time:                 TDateTime;
+    CompressionStrength:  cardinal;
+    ArchiverVersion:      cardinal;
+    Encrypted:            boolean;
+    Blake2:               string; // Baz
   end;
 
 type
   TRARReplaceData = record
-    fileName: Ansistring;
-    size:     int64;
-    time:     TDateTime;
+    FileName: Ansistring;
+    Size:     int64;
+    Time:     TDateTime;
 end;
 
 TRARReplace = (rrCancel, rrOverwrite, rrSkip);
@@ -89,29 +88,26 @@ type
 
 type
   TRARArchiveInformation = record
-    opened:                boolean;
-    fileName:              Ansistring;
-
-    // derived from RAROpenArchiveEx: TRAROpenArchiveDataEx in openArchive()
-    locked:                boolean;
-    signed:                boolean;
-    recovery:              boolean;
-    solid:                 boolean; // also set in processFileHeader(aHeaderDataEx: TRARHeaderDataEx)
-    headerEncrypted:       boolean;
+    Opened:                boolean;
+    FileName:              Ansistring;
+    ArchiverMajorVersion:  cardinal;
+    ArchiverMinorVersion:  cardinal;
+    DictionarySize:        int64;
+    Encryption:            boolean;
+    Solid:                 boolean;
+    HostOS:                string;
+    TotalFiles:            integer;
+    CompressedSize:        int64;
+    UnCompressedSize:      int64;
+    HeaderEncrypted:       boolean;
+    MultiVolume:           boolean;
+    ArchiveComment:        boolean;
+    FileComment:           boolean;
+    Comment:               AnsiString;
+    Signed:                boolean;
+    Locked:                boolean;
+    Recovery:              boolean;
     SFX:                   boolean;
-    comment:               AnsiString;
-    archiveComment:        boolean;
-
-    // derived from processFileHeader(aHeaderDataEx: TRARHeaderDataEx);
-    archiverMajorVersion:  cardinal;
-    archiverMinorVersion:  cardinal;
-    hostOS:                string;
-    totalFiles:            integer; // incremented when processing each file header
-    dictionarySize:        int64;
-    compressedSize:        int64;   // totalled from aHeaderDataEx.PackSize when processing each file header
-    unCompressedSize:      int64;   // totalled from aHeaderDataEx.UnpSize  when processing eacah file header
-    multiVolume:           boolean;
-    fileComment:           boolean;
   end;
 
   TCallbackInfo = class
@@ -125,14 +121,14 @@ type
     FAbort:                 boolean;
     FProgressInfo:          TRARProgressInfo;
     FReadMVToEnd:           boolean;
-    FPackedSizeMVVolume:    cardinal; // from processFileHeader(aHeaderDataEx: TRARHeaderDataEx)
+    FPackedSizeMVVolume:    cardinal;
     FPassword:              AnsiString;
     FComment:               PAnsiChar;
     FCommentResult:         cardinal;
     FArchiveInformation:    TRARArchiveInformation;
     FOpenArchiveDataEx:     TRAROpenArchiveDataEx;
     FArchiveHandle:         THandle;
-    FFileHeaderDataEx:      TRARHeaderDataEx;
+    FHeaderDataEx:          TRARHeaderDataEx;
     FLastResult:            integer;
     FOnError:               TOnRARErrorNotifyEvent;
     FOnListFile:            TOnRARListFile;
@@ -143,7 +139,7 @@ type
     function  openArchive(const aFilePath: string; bExtract: boolean): THANDLE;
     function  closeArchive(aArchiveHandle: THANDLE): boolean;
     function  onUnRarCallBack(msg: cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer;
-    procedure processFileHeader(aFileHeaderDataEx: TRARHeaderDataEx);
+    procedure processHeader(aHeaderDataEx: TRARHeaderDataEx);
     function  checkRARResult(const aResultCode:integer; const aOperation: TRAROperation): integer;
     function  getVersion:string;
     procedure onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
@@ -170,13 +166,13 @@ type
     //pro: display correct crc + display all files in all parts
     //con: all volumes required means to open you have to insert all disk if not all volumes in same folder
     property DLLName:               string                    read getDLLName;
-    property onError:               TOnRARErrorNotifyEvent    read FOnError               write FOnError;
-    property onListFile:            TOnRARListFile            read FOnListFile            write FOnListFile;
-    property onPasswordRequired:    TOnRARPasswordRequired    read FOnPasswordRequired    write FOnPasswordRequired;
-    property onNextVolumeRequired:  TOnRARNextVolumeRequired  read FOnNextVolumeRequired  write FOnNextVolumeRequired;
-    property onProgress:            TOnRARProgress            read FOnProgress            write FOnProgress;
-    property onReplace:             TOnRARReplace             read FOnReplace             write FOnReplace;
-    property archiveInformation:    TRARArchiveInformation    read FArchiveInformation;
+    property OnError:               TOnRARErrorNotifyEvent    read FOnError               write FOnError;
+    property OnListFile:            TOnRARListFile            read FOnListFile            write FOnListFile;
+    property OnPasswordRequired:    TOnRARPasswordRequired    read FOnPasswordRequired    write FOnPasswordRequired;
+    property OnNextVolumeRequired:  TOnRARNextVolumeRequired  read FOnNextVolumeRequired  write FOnNextVolumeRequired;
+    property OnProgress:            TOnRARProgress            read FOnProgress            write FOnProgress;
+    property OnReplace:             TOnRARReplace             read FOnReplace             write FOnReplace;
+    property ArchiveInformation:    TRARArchiveInformation    read FArchiveInformation;
   end;
 
 procedure Register;
@@ -237,22 +233,22 @@ begin
                       end;
 
     UCM_NEEDPASSWORD: begin
-                        if NOT FArchiveInformation.opened then begin
-                          // FArchiveInformation.headerEncrypted := TRUE;   // holy shit!
-                          vPasswordFile := FArchiveInformation.fileName;
+                        if NOT FArchiveInformation.Opened then begin
+                          FArchiveInformation.HeaderEncrypted := TRUE;
+                          vPasswordFile := FArchiveInformation.FileName;
                         end
-                        else vPasswordFile := FProgressInfo.fileName;
+                        else vPasswordFile := FProgressInfo.FileName;
 
-                        if assigned(FOnPasswordRequired) then FOnPasswordRequired(SELF, NOT FArchiveInformation.opened, vPasswordFile, vPassword, vCancel);
+                        if assigned(FOnPasswordRequired) then FOnPasswordRequired(SELF, NOT FArchiveInformation.Opened, vPasswordFile, vPassword, vCancel);
                         strPCopy(Pointer(P1), copy(vPassword, 1, P2)); // P2 = the maximum size of the password buffer in unrar
                         if FAbort or vCancel then result := RAR_CANCEL;
                       end;
 
     UCM_PROCESSDATA:  begin
-                        FProgressInfo.archiveBytesTotal := FArchiveInformation.unCompressedSize;
-                        FProgressInfo.archiveBytesDone  := FProgressInfo.archiveBytesDone + P2;
-                        FProgressInfo.fileBytesTotal    := FFileHeaderDataEx.unpSize;
-                        FProgressInfo.fileBytesDone     := FProgressInfo.fileBytesDone  + P2;
+                        FProgressInfo.ArchiveBytesTotal := FArchiveInformation.UnCompressedSize;
+                        FProgressInfo.ArchiveBytesDone  := FProgressInfo.ArchiveBytesDone + P2;
+                        FProgressInfo.FileBytesTotal    := FHeaderDataEx.UnpSize;
+                        FProgressInfo.FileBytesDone     := FProgressInfo.FileBytesDone  + P2;
 
                         if assigned(FOnProgress) then FOnProgress(SELF, FProgressInfo);
                         if FAbort then result := RAR_CANCEL;
@@ -323,12 +319,12 @@ begin
   //((ArchiveData.Flags and $00000010)=$00000010)=New volume naming scheme ('volname.partN.rar')
 
   //set archive info
-  if ((FOpenArchiveDataEx.Flags AND $00000002) = $00000002) then FArchiveInformation.ArchiveComment   := TRUE; // unrar doesn't seem to set this
   if ((FOpenArchiveDataEx.Flags AND $00000004) = $00000004) then FArchiveInformation.Locked           := TRUE;
-  if ((FOpenArchiveDataEx.Flags AND $00000008) = $00000008) then FArchiveInformation.Solid            := TRUE;
   if ((FOpenArchiveDataEx.Flags AND $00000020) = $00000020) then FArchiveInformation.Signed           := TRUE;
-  if ((FOpenArchiveDataEx.Flags AND $00000040) = $00000040) then FArchiveInformation.Recovery         := TRUE; // unrar doesn't seem to set this
-  if ((FOpenArchiveDataEx.Flags AND $00000080) = $00000080) then FArchiveInformation.HeaderEncrypted  := TRUE; // it does set this
+  if ((FOpenArchiveDataEx.Flags AND $00000040) = $00000040) then FArchiveInformation.Recovery         := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000008) = $00000008) then FArchiveInformation.Solid            := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000002) = $00000002) then FArchiveInformation.ArchiveComment   := TRUE;
+  if ((FOpenArchiveDataEx.Flags AND $00000080) = $00000080) then FArchiveInformation.HeaderEncrypted  := TRUE;
 
   FArchiveInformation.SFX := isSFX(FArchiveInformation.FileName);
 
@@ -355,7 +351,7 @@ begin
   case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
 end;
 
-procedure TRAR.processFileHeader(aFileHeaderDataEx: TRARHeaderDataEx); // populate FArchiveInformation: TRARArchiveInformation and vFileItem: TRARFileItem from aHeaderDataEx
+procedure TRAR.processHeader(aHeaderDataEx: TRARHeaderDataEx); // populate FArchiveInformation: TRARArchiveInformation and vFileItem: TRARFileItem from aHeaderDataEx
 var
   vFileItem:  TRARFileItem;
   ft:         _FILETIME;
@@ -376,31 +372,32 @@ var
 begin
 //  debugFormat('processHeader, Archive: %s, File: %s', [aHeaderDataEx.ArcNameW, aHeaderDataEx.FileNameW]);
   // first part of the file
-  if (FReadMVToEnd) and (NOT ((aFileHeaderDataEx.Flags AND $00000001) = $00000001)) and (((aFileHeaderDataEx.Flags AND $00000002) = $00000002)) then FPackedSizeMVVolume := aFileHeaderDataEx.PackSize;
+  if (FReadMVToEnd) and (NOT ((aHeaderDataEx.Flags AND $00000001) = $00000001)) and (((aHeaderDataEx.Flags AND $00000002) = $00000002)) then FPackedSizeMVVolume := aHeaderDataEx.PackSize;
 
   // NOT last, NOT first part
-  if (FReadMVToEnd) and (((aFileHeaderDataEx.Flags AND $00000001) = $00000001))
-                    and (((aFileHeaderDataEx.Flags AND $00000002) = $00000002)) then  begin
-                                                                                    FPackedSizeMVVolume := FPackedSizeMVVolume + aFileHeaderDataEx.PackSize;
+  if (FReadMVToEnd) and (((aHeaderDataEx.Flags AND $00000001) = $00000001))
+                    and (((aHeaderDataEx.Flags AND $00000002) = $00000002)) then  begin
+                                                                                    FPackedSizeMVVolume := FPackedSizeMVVolume + aHeaderDataEx.PackSize;
                                                                                     EXIT;
                                                                                   end;
   // last part
-  if (FReadMVToEnd) and     (((aFileHeaderDataEx.Flags AND $00000001) = $00000001))
-                    and (NOT ((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
-                    then aFileHeaderDataEx.PackSize := aFileHeaderDataEx.PackSize + FPackedSizeMVVolume;
+  if (FReadMVToEnd) and     (((aHeaderDataEx.Flags AND $00000001) = $00000001))
+                    and (NOT ((aHeaderDataEx.Flags AND $00000002) = $00000002))
+                    then aHeaderDataEx.PackSize := aHeaderDataEx.PackSize + FPackedSizeMVVolume;
 
   // NOT last part
-  if (FReadMVToEnd) and ((aFileHeaderDataEx.Flags AND $00000002) = $00000002) then EXIT;
+  if (FReadMVToEnd) and ((aHeaderDataEx.Flags AND $00000002) = $00000002) then EXIT;
 
-  if FArchiveInformation.ArchiverMajorVersion * 10 + FArchiveInformation.ArchiverMinorVersion < aFileHeaderDataEx.UnpVer then begin
-     FArchiveInformation.ArchiverMinorVersion := aFileHeaderDataEx.UnpVer mod 10;
-     FArchiveInformation.ArchiverMajorVersion :=(aFileHeaderDataEx.UnpVer - FArchiveInformation.ArchiverMinorVersion) div 10;
+  if FArchiveInformation.ArchiverMajorVersion * 10 + FArchiveInformation.ArchiverMinorVersion < aHeaderDataEx.UnpVer then begin
+     FArchiveInformation.ArchiverMinorVersion := aHeaderDataEx.UnpVer mod 10;
+     FArchiveInformation.ArchiverMajorVersion :=(aHeaderDataEx.UnpVer - FArchiveInformation.ArchiverMinorVersion) div 10;
   end;
 
-  if ((aFileHeaderDataEx.Flags AND $00000010) = $00000010) then FArchiveInformation.Solid      := TRUE;
+  if ((aHeaderDataEx.Flags AND $00000004) = $00000004) then FArchiveInformation.Encryption := TRUE;
+  if ((aHeaderDataEx.Flags AND $00000010) = $00000010) then FArchiveInformation.Solid      := TRUE;
 
   OS:='unknown';
-  case aFileHeaderDataEx.HostOS of
+  case aHeaderDataEx.HostOS of
     0: OS:='DOS';
     1: OS:='IBM OS/2';
     2: OS:='Windows';
@@ -408,38 +405,45 @@ begin
   end;
   FArchiveInformation.HostOS := OS;
 
-//  if (NOT ((aFileHeaderDataEx.Flags AND $00000070) = $00000070)) and (aFileHeaderDataEx.fileAttr <> faDirectory) then begin // NOT a directory
-  case (aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory of TRUE: EXIT; end;
+  if (NOT ((aHeaderDataEx.Flags AND $00000070) = $00000070)) and (aHeaderDataEx.FileAttr <> faDirectory) then begin // NOT a directory
+    FArchiveInformation.TotalFiles := FArchiveInformation.TotalFiles + 1;
+    case (aHeaderDataEx.Flags shl 24 shr 29) of
+      0: FArchiveInformation.DictionarySize :=   65536;
+      1: FArchiveInformation.DictionarySize :=  131072;
+      2: FArchiveInformation.DictionarySize :=  262144;
+      3: FArchiveInformation.DictionarySize :=  524288;
+      4: FArchiveInformation.DictionarySize := 1048576;
+      5: FArchiveInformation.DictionarySize := 2097152;
+      6: FArchiveInformation.DictionarySize := 4194304;
+    end;
+  end;
 
-  inc(FArchiveInformation.totalFiles);
-  FArchiveInformation.dictionarySize := aFileHeaderDataEx.dictSize;
+  FArchiveInformation.CompressedSize   := FArchiveInformation.CompressedSize    + aHeaderDataEx.PackSize;
+  FArchiveInformation.UnCompressedSize := FArchiveInformation.UnCompressedSize  + aHeaderDataEx.UnpSize;
 
-  inc(FArchiveInformation.compressedSize,   aFileHeaderDataEx.packSize);
-  inc(FArchiveInformation.unCompressedSize, aFileHeaderDataEx.unpSize);
+  if ((aHeaderDataEx.Flags AND $00000001) = $00000001) or ((aHeaderDataEx.Flags AND $00000002) = $00000002) then FArchiveInformation.MultiVolume := TRUE; // file continued in last or next part
 
-  if ((aFileHeaderDataEx.Flags AND $00000001) = $00000001) or ((aFileHeaderDataEx.Flags AND $00000002) = $00000002) then FArchiveInformation.multiVolume := TRUE; // file continued in last or next part
-
-  if aFileHeaderDataEx.cmtSize > 0 then FArchiveInformation.fileComment := TRUE;
+  if aHeaderDataEx.CmtSize > 0 then FArchiveInformation.FileComment := TRUE;
 
   with vFileItem do begin
-    fileName          := strPas(aFileHeaderDataEx.fileName);
-    fileNameW         := aFileHeaderDataEx.fileNameW;
-    case ((aFileHeaderDataEx.Flags AND $00000004) = $00000004) of TRUE: encrypted := TRUE; end;
-    compressedSize    := aFileHeaderDataEx.packSize;
-    unCompressedSize  := aFileHeaderDataEx.unpSize;
-    hostOS            := OS;
-    CRC32             := format('%x',[aFileHeaderDataEx.fileCRC]);
-    attributes        := aFileHeaderDataEx.fileAttr;
-    comment           := aFileHeaderDataEx.cmtBuf;
+    FileName          := strPas(aHeaderDataEx.FileName);
+    FileNameW         := aHeaderDataEx.FileNameW;
+    CompressedSize    := aHeaderDataEx.PackSize;
+    UnCompressedSize  := aHeaderDataEx.UnpSize;
+//    debugInteger('uncompressedsize', UnCompressedSize);
+    HostOS:=OS;
+    CRC32             := format('%x',[aHeaderDataEx.FileCRC]);
+    Attributes        := aHeaderDataEx.FileAttr;
+    Comment           := aHeaderDataEx.CmtBuf;
 
-    dosDateTimeToFileTime(hiWord(aFileHeaderDataEx.fileTime), loWord(aFileHeaderDataEx.fileTime), ft);
+    dosDateTimeToFileTime(hiWord(aHeaderDataEx.FileTime), loWord(aHeaderDataEx.FileTime), ft);
     fileTimeToSystemTime(ft, st);
-    time := systemTimeToDateTime(st);
+    Time := systemTimeToDateTime(st);
 
-    compressionStrength := aFileHeaderDataEx.method;
-    archiverVersion     := aFileHeaderDataEx.unpVer;
-    encrypted           := (aFileHeaderDataEx.flags AND $00000004) = $00000004;
-    blake2              := binToStr(aFileHeaderDataEx.blake2); // Baz
+    CompressionStrength := aHeaderDataEx.Method;
+    ArchiverVersion     := aHeaderDataEx.UnpVer;
+    Encrypted           := (aHeaderDataEx.Flags AND $00000004) = $00000004;
+    Blake2              := binToStr(aHeaderDataEx.Blake2); // Baz
   end;
 
   if assigned(FOnListFile) then FOnListFile(SELF, vFileItem);
@@ -458,7 +462,7 @@ begin
     repeat
 
       case checkRARResult(RARReadHeaderEx(aArchiveHandle, @vHeaderDataEx), roListFiles)     = RAR_SUCCESS of FALSE: EXIT; end;  // get the next file header in the archive
-      processFileHeader(vHeaderDataEx);
+      processHeader(vHeaderDataEx);
       case checkRARResult(RARProcessFile(aArchiveHandle, RAR_SKIP, NIL, NIL), roListFiles)  = RAR_SUCCESS of FALSE: EXIT; end;  // do nothing - skip to next file header
 
       application.processMessages;  // allow the user to actually press a cancel button
@@ -520,7 +524,7 @@ begin
 
     while (vReadFileHeaderResult = RAR_SUCCESS) and result do begin
 
-      vReadFileHeaderResult := RARReadHeaderEx(FArchiveHandle, @FFileHeaderDataEx);
+      vReadFileHeaderResult := RARReadHeaderEx(FArchiveHandle, @FHeaderDataEx);
       if vReadFileHeaderResult = ERAR_END_ARCHIVE then BREAK;
 
       if vReadFileHeaderResult <> RAR_SUCCESS then  begin
@@ -529,28 +533,28 @@ begin
                                                     end;
 
       FProgressInfo                     := default(TRARProgressInfo);
-      FProgressInfo.FileName            := FFileHeaderDataEx.FileNameW;
-      FProgressInfo.ArchiveBytesTotal   := FFileHeaderDataEx.UnpSize;
+      FProgressInfo.FileName            := FHeaderDataEx.FileNameW;
+      FProgressInfo.ArchiveBytesTotal   := FHeaderDataEx.UnpSize;
       vReplaceResult                    := rrOverWrite;
 
-      if extractFile(strPas(FFileHeaderDataEx.FileName), aFiles) then begin    //todo: UniCode FileName
+      if extractFile(strPas(FHeaderDataEx.FileName), aFiles) then begin    //todo: UniCode FileName
 
         if bRestoreFolder then
-          vExistentFile.FileName  := aFilePath + strPas(FFileHeaderDataEx.FileName)
+          vExistentFile.FileName  := aFilePath + strPas(FHeaderDataEx.FileName)
         else
-          vExistentFile.FileName  := aFilePath + extractFileName(strPas(FFileHeaderDataEx.FileName));
+          vExistentFile.FileName  := aFilePath + extractFileName(strPas(FHeaderDataEx.FileName));
 
         vExistentFile.Size := getFileSize(vExistentFile.FileName);
         vExistentFile.Time := getFileModifyDate(vExistentFile.FileName);
 
         if bRestoreFolder then
-          vArchiveFile.FileName := strPas(FFileHeaderDataEx.FileName)
+          vArchiveFile.FileName := strPas(FHeaderDataEx.FileName)
         else
-          vArchiveFile.FileName := extractFileName(StrPas(FFileHeaderDataEx.FileName));
+          vArchiveFile.FileName := extractFileName(StrPas(FHeaderDataEx.FileName));
 
-        vArchiveFile.Size := FFileHeaderDataEx.UnpSize;
+        vArchiveFile.Size := FHeaderDataEx.UnpSize;
 
-        dosDateTimeToFileTime(hiWord(FFileHeaderDataEx.FileTime), loWord(FFileHeaderDataEx.FileTime), ft);
+        dosDateTimeToFileTime(hiWord(FHeaderDataEx.FileTime), loWord(FHeaderDataEx.FileTime), ft);
         fileTimeToSystemTime(ft, st);
         vArchiveFile.Time := systemTimeToDateTime(st);
 
@@ -563,12 +567,12 @@ begin
                         then
                           vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_EXTRACT, PAnsiChar(aFilePath), NIL)
                         else
-                        if (NOT ((FFileHeaderDataEx.Flags AND $00000070) = $00000070)) and (FFileHeaderDataEx.FileAttr <> faDirectory) then
+                        if (NOT ((FHeaderDataEx.Flags AND $00000070) = $00000070)) and (FHeaderDataEx.FileAttr <> faDirectory) then
                           vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_EXTRACT, Nil, PAnsiChar(vExistentFile.FileName));
           rrSkip:       begin
                           vReadFileHeaderResult := RARProcessFile(FArchiveHandle, RAR_SKIP, PAnsiChar(aFilePath), NIL);
                           {$WARN COMBINING_SIGNED_UNSIGNED OFF}
-                          FProgressInfo.ArchiveBytesDone := FProgressInfo.ArchiveBytesDone + FFileHeaderDataEx.UnpSize;
+                          FProgressInfo.ArchiveBytesDone := FProgressInfo.ArchiveBytesDone + FHeaderDataEx.UnpSize;
                           {$WARN COMBINING_SIGNED_UNSIGNED ON}
                         end;
         end;
@@ -597,7 +601,7 @@ begin
     repeat
 
       case checkRARResult(RARReadHeaderEx(aArchiveHandle, @vHeaderDataEx), roTest)     = RAR_SUCCESS of FALSE: EXIT; end;  // get the next file header in the archive
-      processFileHeader(vHeaderDataEx);
+      processHeader(vHeaderDataEx);
 
       aProgressInfo.FileBytesDone   := 0;
       aProgressInfo.FileBytesTotal  := vHeaderDataEx.UnpSize;

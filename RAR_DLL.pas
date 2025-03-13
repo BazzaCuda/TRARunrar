@@ -101,21 +101,21 @@ type
 
   {$ALIGN 1}
   TRARHeaderData = record
-    ArcName:    array[0..259] of AnsiChar;
-    FileName:   array[0..259] of AnsiChar;
-    Flags:      cardinal;
-    PackSize:   cardinal;
-    UnpSize:    cardinal;
-    HostOS:     cardinal;
-    FileCRC:    cardinal;
-    FileTime:   cardinal;
-    UnpVer:     cardinal;
-    Method:     cardinal;
-    FileAttr:   cardinal;
-    CmtBuf:     PAnsiChar;
-    CmtBufSize: cardinal;
-    CmtSize:    cardinal;
-    CmtState:   cardinal;
+    arcName:    array[0..259] of AnsiChar;
+    fileName:   array[0..259] of AnsiChar;
+    flags:      cardinal;
+    packSize:   cardinal;
+    unpSize:    cardinal;
+    hostOS:     cardinal;
+    fileCRC:    cardinal;
+    fileTime:   cardinal;
+    unpVer:     cardinal;
+    method:     cardinal;
+    fileAttr:   cardinal;
+    cmtBuf:     PAnsiChar;
+    cmtBufSize: cardinal;
+    cmtSize:    cardinal;
+    cmtState:   cardinal;
   end;
   {$A-} // Reset alignment to default
   PRARHeaderData = ^TRARHeaderData;
@@ -123,63 +123,64 @@ type
   //for UniCode FileNames and 64-Bit Sizes
   {$ALIGN 1}
   TRARHeaderDataEx = record
-    ArcName:      array[0..1023] of AnsiChar;
-    ArcNameW:     array[0..1023] of WideChar;
-    FileName:     array[0..1023] of AnsiChar;
-    FileNameW:    array[0..1023] of WideChar;
-    Flags:        cardinal;
-    PackSize:     cardinal;
-    PackSizeHigh: cardinal;
-    UnpSize:      cardinal;
-    UnpSizeHigh:  cardinal;
-    HostOS:       cardinal;
-    FileCRC:      cardinal;
-    FileTime:     cardinal;
-    UnpVer:       cardinal;
-    Method:       cardinal;
-    FileAttr:     cardinal;
-    CmtBuf:       PAnsiChar;
-    CmtBufSize:   cardinal;
-    CmtSize:      cardinal;
-    CmtState:     cardinal;
-    DictSize:     cardinal;                   // Baz
-    HashType:     cardinal;                   // Baz
-    Blake2:       array[0..31] of byte;       // Baz
-    Reserved:     array[0..981] of cardinal;
+    arcName:      array[0..1023] of AnsiChar;
+    arcNameW:     array[0..1023] of WideChar;
+    fileName:     array[0..1023] of AnsiChar;
+    fileNameW:    array[0..1023] of WideChar;
+    flags:        cardinal;
+    packSize:     cardinal;
+    packSizeHigh: cardinal;
+    unpSize:      cardinal;
+    unpSizeHigh:  cardinal;
+    hostOS:       cardinal;
+    fileCRC:      cardinal;
+    fileTime:     cardinal;
+    unpVer:       cardinal;
+    method:       cardinal;
+    fileAttr:     cardinal;
+    cmtBuf:       PAnsiChar;
+    cmtBufSize:   cardinal;
+    cmtSize:      cardinal;
+    cmtState:     cardinal;
+    dictSize:     cardinal;                   // Baz
+    hashType:     cardinal;                   // Baz
+    blake2:       array[0..31] of byte;       // Baz
+    reserved:     array[0..981] of cardinal;
   end;
   {$A-} // Reset alignment to default
   PRARHeaderDataEx = ^TRARHeaderDataEx;
 
   {$ALIGN 1}
   TRAROpenArchiveData = record
-    ArcName:    PAnsiChar;
-    OpenMode:   cardinal;
-    OpenResult: cardinal;
-    CmtBuf:     PAnsiChar;
-    CmtBufSize: cardinal;
-    CmtSize:    cardinal;
-    CmtState:   cardinal;
+    arcName:    PAnsiChar;
+    openMode:   cardinal;
+    openResult: cardinal;
+    cmtBuf:     PAnsiChar;
+    cmtBufSize: cardinal;
+    cmtSize:    cardinal;
+    cmtState:   cardinal;
   end;
   {$A-} // Reset alignment to default
   PRAROpenArchiveData = ^TRAROpenArchiveData;
 
   {$ALIGN 1}
   TRAROpenArchiveDataEx = record
-    ArcName:      PAnsiChar;
-    ArcNameW:     PWideChar;
-    OpenMode:     cardinal;
-    OpenResult:   cardinal;
-    CmtBuf:       PAnsiChar;
-    CmtBufSize:   cardinal;
-    CmtSize:      cardinal;
-    CmtState:     cardinal;
-    Flags:        cardinal;
-    Callback:     cardinal;
-    LParam:       cardinal;
-    OpFlags:      cardinal;
-    CmtBufW:      PWideChar;
-    MarkOfTheWeb: PWideChar;
-    Reserved:   array[1..23] of cardinal;
+    arcName:      PAnsiChar;
+    arcNameW:     PWideChar;
+    openMode:     cardinal;
+    openResult:   cardinal;
+    cmtBuf:       PAnsiChar;
+    cmtBufSize:   cardinal;
+    cmtSize:      cardinal;
+    cmtState:     cardinal;
+//
+    flags:        cardinal;
+    callback:     cardinal;
+    userData:     LPARAM;
+    opFlags:      cardinal;
+    cmtBufW:      PWideChar;
+    markOfTheWeb: PWideChar;
+    reserved:   array[1..23] of cardinal;
   end;
   {$A-} // Reset alignment to default
   PRAROpenArchiveDataEx = ^TRAROpenArchiveDataEx;
@@ -211,7 +212,7 @@ implementation
 type
   IDLL = interface
   ['{59866286-8FC9-4044-AF9E-712E53744112}']
-    function dllName: string;
+    function DLLName: string;
   end;
 
   TDLL = class(TInterfacedObject, IDLL)
@@ -226,7 +227,7 @@ type
     constructor create;
     destructor  destroy;
    public
-     function dllName: string;
+     function DLLName: string;
   end;
 
 var
@@ -234,7 +235,7 @@ var
 
 function RARDLLName: string;
 begin
-  result := GDLL.dllName;
+  result := GDLL.DLLName;
 end;
 
 function getFileModifyDate(const fileName:string): TDateTime;
@@ -297,7 +298,7 @@ begin
   inherited create;
   FRARDLLInstance := loadDLL({$IFDEF WIN32} 'UnRAR32.dll' {$ELSE} 'UnRAR64.dll' {$ENDIF});
   case FRARDLLInstance = RAR_INVALID_HANDLE of TRUE:  begin
-                                                        messageBox(0, 'unable to load DLL', 'Error', MB_ICONSTOP or MB_OK);
+                                                        messageBox(0, pchar('unable to load DLL: ' + FDLLName), 'Error', MB_ICONSTOP or MB_OK);
                                                         HALT;
                                                       end;end;
 end;
@@ -327,7 +328,7 @@ begin
   or (@RARSetCallback = NIL) or (@RARSetChangeVolProc = NIL) or (@RARSetProcessDataProc = NIL)
   or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL)
   then unloadDLL
-  else if RARGetDllVersion < RAR_MIN_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'error', 0);
+  else if RARGetDllVersion < RAR_MIN_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'Error', MB_ICONSTOP or MB_OK);
 end;
 
 destructor TDLL.destroy;
