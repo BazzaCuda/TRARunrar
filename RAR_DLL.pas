@@ -99,8 +99,7 @@ type
   TChangeVolProc    = function(ArcName: PAnsiChar; Mode: integer): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   TUnRarCallBack    = function(msg: Cardinal; UserData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {stdcall;} {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
-  {$ALIGN 1}
-  TRARHeaderData = record
+  TRARHeaderData = packed record
     arcName:    array[0..259] of AnsiChar;
     fileName:   array[0..259] of AnsiChar;
     flags:      cardinal;
@@ -117,12 +116,11 @@ type
     cmtSize:    cardinal;
     cmtState:   cardinal;
   end;
-  {$A-} // Reset alignment to default
   PRARHeaderData = ^TRARHeaderData;
 
   //for UniCode FileNames and 64-Bit Sizes
-  {$ALIGN 1}
-  TRARHeaderDataEx = record
+//  {$ALIGN 1}
+  TRARHeaderDataEx = packed record
     arcName:      array[0..1023] of AnsiChar;
     arcNameW:     array[0..1023] of WideChar;
     fileName:     array[0..1023] of AnsiChar;
@@ -142,16 +140,30 @@ type
     cmtBufSize:   cardinal;
     cmtSize:      cardinal;
     cmtState:     cardinal;
-    dictSize:     cardinal;                   // Baz
-    hashType:     cardinal;                   // Baz
-    blake2:       array[0..31] of byte;       // Baz
+    dictSize:     cardinal;
+    hashType:     cardinal;
+    hash:         array[0..31] of byte;
+    redirType:    cardinal;
+    redirName:    PWideChar;
+    redirNameSize: cardinal;
+    dirTarget:    cardinal;
+    MTimeLow:     cardinal;
+    MTimeHigh:    cardinal;
+    CTimeLow:     cardinal;
+    CTimeHigh:    cardinal;
+    ATimeLow:     cardinal;
+    ATimeHigh:    cardinal;
+    arcNameEx:    PWideChar;
+    arcNameExSize: cardinal;
+    fileNameEx:   PWideChar;
+    fileNameExSize: cardinal;
     reserved:     array[0..981] of cardinal;
+//    reserved2:    array[0..275] of cardinal;
   end;
-  {$A-} // Reset alignment to default
+//  {$A-} // Reset alignment to default
   PRARHeaderDataEx = ^TRARHeaderDataEx;
 
-  {$ALIGN 1}
-  TRAROpenArchiveData = record
+  TRAROpenArchiveData = packed record
     arcName:    PAnsiChar;
     openMode:   cardinal;
     openResult: cardinal;
@@ -160,11 +172,9 @@ type
     cmtSize:    cardinal;
     cmtState:   cardinal;
   end;
-  {$A-} // Reset alignment to default
   PRAROpenArchiveData = ^TRAROpenArchiveData;
 
-  {$ALIGN 1}
-  TRAROpenArchiveDataEx = record
+  TRAROpenArchiveDataEx = packed record
     arcName:      PAnsiChar;
     arcNameW:     PWideChar;
     openMode:     cardinal;
@@ -182,7 +192,6 @@ type
     markOfTheWeb: PWideChar;
     reserved:   array[1..23] of cardinal;
   end;
-  {$A-} // Reset alignment to default
   PRAROpenArchiveDataEx = ^TRAROpenArchiveDataEx;
 
 var
