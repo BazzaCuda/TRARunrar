@@ -211,7 +211,7 @@ var
   RARSetPassword:         procedure (hArcData: THandle; Password:         PAnsiChar);                                             {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   RARGetDllVersion:       function:                                                                                     integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
-function getFileModifyDate(const fileName: string): TDateTime;
+function getFileModifiedDate(const aFilePath: string): TDateTime;
 function getFileSize(const s: string): int64;
 function isSFX(const fileName:String): boolean;
 function RARDLLName: string;
@@ -247,14 +247,14 @@ begin
   result := GDLL.DLLName;
 end;
 
-function getFileModifyDate(const fileName:string): TDateTime;
+function getFileModifiedDate(const aFilePath:string): TDateTime;
 var
   vHandle:    THandle;
   vStruct:    TOFStruct;
   vLastWrite: integer;
 begin
   result  := 0;
-  vHandle := openFile(PAnsiChar(fileName), vStruct, OF_SHARE_DENY_NONE);
+  vHandle := openFile(PAnsiChar(aFilePath), vStruct, OF_SHARE_DENY_NONE);
   try
     if vHandle <> HFILE_ERROR then
     begin

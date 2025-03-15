@@ -44,8 +44,8 @@ type
   TRAROperation   = (roOpenArchive, roCloseArchive, roListFiles, roExtract, roTest);
   TRARHeaderType  = (htFile, htDirectory);
   TRAROpenMode    = (omRAR_OM_LIST, omRAR_OM_EXTRACT, omRAR_OM_LIST_INCSPLIT);
+  TRARReplace     = (rrCancel, rrOverwrite, rrSkip);
 
-type
   TRARProgressInfo = record
     fileName:           WideString;
     archiveBytesTotal:  LongInt;
@@ -54,7 +54,6 @@ type
     fileBytesDone:      LongInt;
   end;
 
-type
   TRARFileItem = record
     // derived from processFileHeader(aHeaderDataEx: TRARHeaderDataEx)
     fileName:             AnsiString;
@@ -72,24 +71,19 @@ type
     blake2:               string;
   end;
 
-type
   TRARReplaceData = record
     fileName: Ansistring;
     size:     int64;
     time:     TDateTime;
-end;
+  end;
 
-TRARReplace = (rrCancel, rrOverwrite, rrSkip);
+  TRAROnErrorNotifyEvent    = procedure(Sender: TObject; const aErrorCode: integer; const aOperation: TRAROperation) of object;
+  TRAROnListFile            = procedure(Sender: TObject; const aFileInformation: TRARFileItem) of object;
+  TRAROnPasswordRequired    = procedure(Sender: TObject; const aHeaderPassword: boolean; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
+  TRAROnNextVolumeRequired  = procedure(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean) of object;
+  TRAROnProgress            = procedure(Sender: TObject; const aProgressInfo: TRARProgressInfo) of object;
+  TRAROnReplace             = procedure(Sender: TObject; const aExistingData:TRARReplaceData; aNewData:TRARReplaceData; out oAction: TRARReplace) of object;
 
-type
-  TOnRARErrorNotifyEvent    = procedure(Sender: TObject; const aErrorCode: integer; const aOperation: TRAROperation) of object;
-  TOnRARListFile            = procedure(Sender: TObject; const aFileInformation: TRARFileItem) of object;
-  TOnRARPasswordRequired    = procedure(Sender: TObject; const aHeaderPassword: boolean; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
-  TOnRARNextVolumeRequired  = procedure(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean) of object;
-  TOnRARProgress            = procedure(Sender: TObject; const aProgressInfo: TRARProgressInfo) of object;
-  TOnRARReplace             = procedure(Sender: TObject; const aExistingData:TRARReplaceData; aNewData:TRARReplaceData; out oAction: TRARReplace) of object;
-
-type
   TRARArchiveInfo = record
     fileName:             Ansistring;
     fileNameW:            WideString;
@@ -119,6 +113,7 @@ type
   TRARArchive = class(TObject)
     handle:               THandle;
     opened:               boolean;
+    password:             AnsiString;
     info:                 TRARArchiveInfo;
     fileItem:             TRARFileItem;
     progressInfo:         TRARProgressInfo;
@@ -133,59 +128,59 @@ type
     destructor  destroy; override;
   end;
 
-//  ICallBackInfo = interface
-//  ['{9D062B91-12D3-47E2-821A-215938DAD3CE}']
-//    function  getOnPasswordRequired: TOnRARPasswordRequired;
-//    function  getOnRARProgress: TOnRARProgress;
-//    function  getRAR: TRARArchive;
-//    procedure setOnPasswordRequired(const Value: TOnRARPasswordRequired);
-//    procedure setOnRARProgress(const Value: TOnRARProgress);
-//    procedure setRAR(const Value: TRARArchive);
-//    property  RAR:                  TRARArchive             read getRAR                 write setRAR;
-//    property  onPasswordRequired:   TOnRARPasswordRequired  read getOnPasswordRequired  write setOnPasswordRequired;
-//    property  onRARProgress:        TOnRARProgress          read getOnRARProgress       write setOnRARProgress;
-//  end;
+  ICallBackInfo = interface
+  ['{9D062B91-12D3-47E2-821A-215938DAD3CE}']
+    function  getOnPasswordRequired: TRAROnPasswordRequired;
+    function  getOnProgress: TRAROnProgress;
+    function  getRAR: TRARArchive;
+    procedure setOnPasswordRequired(const Value: TRAROnPasswordRequired);
+    procedure setOnProgress(const Value: TRAROnProgress);
+    procedure setRAR(const Value: TRARArchive);
+    property  RAR:                  TRARArchive             read getRAR                 write setRAR;
+    property  onPasswordRequired:   TRAROnPasswordRequired  read getOnPasswordRequired  write setOnPasswordRequired;
+    property  onProgress:           TRAROnProgress          read getOnProgress          write setOnProgress;
+  end;
 
-//  TCallBackInfo = class(TInterfacedObject, ICallBackInfo)
-  TCallBackInfo = class(TObject)
+  TCallBackInfo = class(TInterfacedObject, ICallBackInfo)
+  strict private
     FRAR:                 TRARArchive;
-    FOnPasswordRequired:  TOnRARPasswordRequired;
-    FOnProgress:          TOnRARProgress;
+    FOnPasswordRequired:  TRAROnPasswordRequired;
+    FOnProgress:          TRAROnProgress;
   private
-    function  getOnPasswordRequired: TOnRARPasswordRequired;
-    function  getOnProgress:         TOnRARProgress;
+    function  getOnPasswordRequired: TRAROnPasswordRequired;
+    function  getOnProgress:         TRAROnProgress;
     function  getRAR:                TRARArchive;
-    procedure setOnPasswordRequired(const Value: TOnRARPasswordRequired);
-    procedure setOnProgress(const Value: TOnRARProgress);
+    procedure setOnPasswordRequired(const Value: TRAROnPasswordRequired);
+    procedure setOnProgress(const Value: TRAROnProgress);
     procedure setRAR(const Value: TRARArchive);
   public
     property  RAR:                  TRARArchive             read getRAR                 write setRAR;
-    property  onPasswordRequired:   TOnRARPasswordRequired  read getOnPasswordRequired  write setOnPasswordRequired;
-    property  onProgress:           TOnRARProgress          read getOnProgress          write setOnProgress;
+    property  onPasswordRequired:   TRAROnPasswordRequired  read getOnPasswordRequired  write setOnPasswordRequired;
+    property  onProgress:           TRAROnProgress          read getOnProgress          write setOnProgress;
   end;
 
   IRARResult = interface
   ['{8CBBE61B-C5F8-4FFD-96D0-32C29CC05AAB}']
     function  checkRARResult(const aResultCode: integer; const aOperation: TRAROperation): integer;
     function  getLastResult: integer;
-    function  getOnError:    TOnRARErrorNotifyEvent;
-    procedure setOnError(const Value: TOnRARErrorNotifyEvent);
+    function  getOnError:    TRAROnErrorNotifyEvent;
+    procedure setOnError(const Value: TRAROnErrorNotifyEvent);
     property  lastResult:    integer read getLastResult;
-    property  onError:       TOnRARErrorNotifyEvent  read getOnError         write setOnError;
+    property  onError:       TRAROnErrorNotifyEvent  read getOnError         write setOnError;
   end;
 
   TRARResult = class(TInterfacedObject, IRARResult)
   strict private
-    FOnError:     TOnRARErrorNotifyEvent;
+    FOnError:     TRAROnErrorNotifyEvent;
     FLastResult:  integer;
   public
     function  checkRARResult(const aResultCode: integer; const aOperation: TRAROperation): integer;
     function  getLastResult:  integer;
-    function  getOnError:     TOnRARErrorNotifyEvent;
-    procedure setOnError(const Value: TOnRARErrorNotifyEvent);
+    function  getOnError:     TRAROnErrorNotifyEvent;
+    procedure setOnError(const Value: TRAROnErrorNotifyEvent);
 
     property  lastResult:     integer                 read getLastResult;
-    property  onError:        TOnRARErrorNotifyEvent  read getOnError         write setOnError;
+    property  onError:        TRAROnErrorNotifyEvent  read getOnError         write setOnError;
   end;
 
 type
@@ -195,29 +190,22 @@ type
 
     FPassword:              AnsiString;
 
-    FOnListFile:            TOnRARListFile;
-    FOnPasswordRequired:    TOnRARPasswordRequired;
-    FOnNextVolumeRequired:  TOnRARNextVolumeRequired;
-    FOnProgress:            TOnRARProgress;
-    FOnReplace:             TOnRARReplace;
+    FOnListFile:            TRAROnListFile;
+    FOnPasswordRequired:    TRAROnPasswordRequired;
+    FOnNextVolumeRequired:  TRAROnNextVolumeRequired;
+    FOnProgress:            TRAROnProgress;
+    FOnReplace:             TRAROnReplace;
 
     FReadMVToEnd:           boolean;
 
-    function  getOnError:   TOnRARErrorNotifyEvent;
-    procedure setOnError(const Value: TOnRARErrorNotifyEvent);
+    function  getOnError:   TRAROnErrorNotifyEvent;
+    procedure setOnError(const Value: TRAROnErrorNotifyEvent);
 
     function  getDLLName: string;
     function  getVersion:string;
 
     procedure onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
 
-    function  openArchive(const aFilePath: string; const aOpenMode: TRAROpenMode; const aRAR: TRARArchive; bInitArchive: boolean): boolean;
-    function  closeArchive(const aArchiveHandle: THANDLE): boolean;
-    function  initCallBack(const aRAR: TRARArchive): TCallBackInfo;
-    function  listArchiveFiles(const aRAR: TRARArchive; bNotify: boolean = TRUE): boolean;
-    function  listFiles(const aFilePath: string): boolean;
-    function  processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType;
-    function  testArchiveFiles(const aRAR: TRARArchive): boolean;
     function  getArchiveInfo: TRARArchiveInfo;
     function  getDLLVersion:  integer;
   public
@@ -228,6 +216,8 @@ type
   private
     function  getReadMVToEnd: boolean;
     procedure setReadMVToEnd(const Value: boolean);
+    function getPassword: AnsiString;
+    procedure setPassword(const Value: AnsiString);
 
   public
     function  listArchive(const aFilePath:string):  boolean;
@@ -241,15 +231,15 @@ type
     property DLLName:               string                    read getDLLName;
     property DLLVersion:            integer                   read getDLLVersion;
 
-    property onError:               TOnRARErrorNotifyEvent    read getOnError             write setOnError;
-    property onListFile:            TOnRARListFile            read FOnListFile            write FOnListFile;
-    property onPasswordRequired:    TOnRARPasswordRequired    read FOnPasswordRequired    write FOnPasswordRequired;
-    property onNextVolumeRequired:  TOnRARNextVolumeRequired  read FOnNextVolumeRequired  write FOnNextVolumeRequired;
-    property onProgress:            TOnRARProgress            read FOnProgress            write FOnProgress;
-    property onReplace:             TOnRARReplace             read FOnReplace             write FOnReplace;
+    property onError:               TRAROnErrorNotifyEvent    read getOnError             write setOnError;
+    property onListFile:            TRAROnListFile            read FOnListFile            write FOnListFile;
+    property onPasswordRequired:    TRAROnPasswordRequired    read FOnPasswordRequired    write FOnPasswordRequired;
+    property onNextVolumeRequired:  TRAROnNextVolumeRequired  read FOnNextVolumeRequired  write FOnNextVolumeRequired;
+    property onProgress:            TRAROnProgress            read FOnProgress            write FOnProgress;
+    property onReplace:             TRAROnReplace             read FOnReplace             write FOnReplace;
 
     property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
-    property password:              AnsiString                read FPassword              write FPassword; // can be supplied by the user before calling an operation
+    property password:              AnsiString                read getPassword            write setPassword; // can be supplied by the user before calling an operation
   end;
 
 procedure Register;
@@ -275,6 +265,44 @@ begin
   result := RR.checkRARResult(aResultCode, aOperation);
 end;
 
+function UnRarCallBack(msg: cardinal; userData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+var
+  vCancel:        boolean;
+  vPasswordFile:  AnsiString;
+  vPassword:      AnsiString;
+begin
+  vCancel := FALSE;
+  result  := RAR_CONTINUE;
+  var vCBI := ICallbackInfo(userData);
+
+  try
+
+    case msg of
+      UCM_NEEDPASSWORD: begin
+                          case assigned(vCBI.onPasswordRequired) of TRUE: vCBI.onPasswordRequired(vCBI.RAR, NOT vCBI.RAR.opened, vPasswordFile, vPassword, vCancel); end;
+                          case vCancel of TRUE: result := RAR_CANCEL; end;
+                          strPCopy(Pointer(P1), copy(vPassword, 1, P2)); // P1 = pointer to the password buffer in unrar; P2 = maximum size of the buffer
+                        end;
+
+      UCM_PROCESSDATA:  begin
+                          vCBI.RAR.progressInfo.ArchiveBytesDone  := vCBI.RAR.progressInfo.ArchiveBytesDone + P2;
+                          vCBI.RAR.progressInfo.FileBytesDone     := vCBI.RAR.progressInfo.FileBytesDone    + P2;
+
+                          case assigned(vCBI.onProgress) of TRUE: vCBI.onProgress(vCBI.RAR, vCBI.RAR.progressInfo); end;
+                          case vCBI.RAR.abort of TRUE: result := RAR_CANCEL; end;
+                        end;
+    end;
+
+  except
+    MessageBox(0, 'It go Bang!', 'Bang!', MB_ICONEXCLAMATION or MB_OK);
+  end;
+end;
+
+
+function closeArchive(const aArchiveHandle: THANDLE): boolean;
+begin
+  case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
+end;
 
 function getOpenMode(bReadMVToEnd: boolean): TRAROpenMode;
 begin
@@ -297,66 +325,13 @@ begin
   end;
 end;
 
-function UnRarCallBack(msg: cardinal; userData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
-var
-  vCancel:        boolean;
-  vPasswordFile:  AnsiString;
-  vPassword:      AnsiString;
+function initCallBack(const aRAR: TRARArchive; aOnProgress: TRAROnProgress = NIL; aOnPasswordRequired: TRAROnPasswordRequired = NIL): ICallBackInfo;
 begin
-  vCancel := FALSE;
-  result  := RAR_CONTINUE;
-  var vCBI := TCallbackInfo(userData);
-
-  try
-
-    case msg of
-      UCM_NEEDPASSWORD: begin
-                          case assigned(vCBI.onPasswordRequired) of TRUE: vCBI.onPasswordRequired(vCBI.RAR, NOT vCBI.RAR.opened, vPasswordFile, vPassword, vCancel); end;
-                          case vCancel of TRUE: result := RAR_CANCEL; end;
-                          strPCopy(Pointer(P1), copy(vPassword, 1, P2)); // P1 = pointer to the password buffer in unrar; P2 = maximum size of the buffer
-                        end;
-
-      UCM_PROCESSDATA:  begin
-                          vCBI.RAR.progressInfo.ArchiveBytesDone  := vCBI.RAR.progressInfo.ArchiveBytesDone + P2;
-                          vCBI.RAR.progressInfo.FileBytesDone     := vCBI.RAR.progressInfo.FileBytesDone    + P2;
-
-                          case assigned(vCBI.FOnProgress) of TRUE: vCBI.onProgress(vCBI.RAR, vCBI.RAR.progressInfo); end;
-                          case vCBI.RAR.abort of TRUE: result := RAR_CANCEL; end;
-                        end;
-    end;
-
-  except
-    MessageBox(0, 'It go Bang!', 'Bang!', MB_ICONEXCLAMATION or MB_OK);
-  end;
-end;
-
-{ TRAR }
-
-procedure TRAR.onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
-begin
-  debugString('FileName', aProgressInfo.FileName);
-  debugFormat('Archive Bytes: %d, Archive Bytes Done: %d', [aProgressInfo.ArchiveBytesTotal, aProgressInfo.ArchiveBytesDone]);
-  debugFormat('FileBytesTotal: %d, FileBytesDone: %d', [aProgressInfo.FileBytesTotal, aProgressInfo.FileBytesDone]);
-end;
-
-constructor TRAR.create(AOwner: TComponent);
-begin
-  inherited create(AOwner);
-
-  FRAR          := TRARArchive.create;
-
-  FOnProgress   := onRARProgressTest;
-end;
-
-destructor TRAR.Destroy;
-begin
-  case assigned(FRAR) of TRUE: FRAR.free; end;
-  inherited destroy;
-end;
-
-function TRAR.listArchive(const aFilePath: string): boolean;
-begin
-  result := listFiles(aFilePath);
+  result                    := TCallBackInfo.create;
+  result.RAR                := aRAR;
+  result.onProgress         := aOnProgress;
+  result.onPasswordRequired := aOnPasswordRequired;
+  RARSetCallback(aRAR.handle, UnRarCallBack, LPARAM(result));
 end;
 
 function processOpenArchive(const aOpenArchiveDataEx: TRAROpenArchiveDataEx; const aRAR: TRARArchive): boolean;
@@ -397,7 +372,7 @@ begin
   result := TRUE;
 end;
 
-function TRAR.openArchive(const aFilePath: string; const aOpenMode: TRAROpenMode; const aRAR: TRARArchive; bInitArchive: boolean): boolean;
+function openArchive(const aFilePath: string; const aOpenMode: TRAROpenMode; const aRAR: TRARArchive; bInitArchive: boolean): boolean;
 begin
   case bInitArchive of TRUE: initArchive(aRAR); end;
 
@@ -408,7 +383,6 @@ begin
 
   var vOpenArchiveDataEx := default(TRAROpenArchiveDataEx);
   with vOpenArchiveDataEx do begin
-//    OpenResult := RAR_SUCCESS;
 
     arcName     := PAnsiChar(aRAR.info.fileName);
     arcNameW    := PWideChar(aRAR.info.fileNameW);
@@ -429,12 +403,7 @@ begin
   result := processOpenArchive(vOpenArchiveDataEx, aRAR);
 end;
 
-function TRAR.closeArchive(const aArchiveHandle: THANDLE): boolean;
-begin
-  case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
-end;
-
-function TRAR.processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType; // populate FArchiveInfo: TRARArchiveInfo and vFileItem: TRARFileItem from aHeaderDataEx
+function processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType; // populate FArchiveInfo: TRARArchiveInfo and vFileItem: TRARFileItem from aHeaderDataEx
 var
   ft:         _FILETIME;
   st:         TSystemTime;
@@ -522,51 +491,7 @@ begin
   end;
 end;
 
-procedure TRAR.setOnError(const Value: TOnRARErrorNotifyEvent);
-begin
-  RR.onError := value;
-end;
-
-procedure TRAR.setReadMVToEnd(const Value: boolean);
-begin
-  FReadMVToEnd      := value;
-  FRAR.readMVToEnd  := value;
-end;
-
-function TRAR.listArchiveFiles(const aRAR: TRARArchive; bNotify: boolean = TRUE): boolean;
-begin
-  var vHeaderDataEx := default(TRARHeaderDataEx);
-
-  try
-    repeat
-      case checkRARResult(RARReadHeaderEx(aRAR.handle, @vHeaderDataEx), roListFiles)     = RAR_SUCCESS  of FALSE: EXIT; end;  // get the next file header in the archive
-      case (processFileHeader(vHeaderDataEx, aRAR) = htFile) and bNotify and assigned(FOnListFile)      of  TRUE: FOnListFile(SELF, aRAR.fileItem); end;
-      case checkRARResult(RARProcessFile(aRAR.handle, RAR_SKIP, NIL, NIL), roListFiles)  = RAR_SUCCESS  of FALSE: EXIT; end;  // do nothing - skip to next file header
-
-      application.processMessages;  // allow the user to actually press a cancel button
-    until aRAR.abort;               // RARReadHeaderEx = ERAR_END_ARCHIVE will usually exit the loop
-
-  finally
-    result := RR.lastResult = ERAR_END_ARCHIVE; // not an error in this case
-  end;
-end;
-
-function TRAR.listFiles(const aFilePath: string): boolean;
-begin
-  result := openArchive(aFilePath, omRAR_OM_LIST, FRAR, TRUE);
-  case result of FALSE: EXIT; end;
-
-  var vCBI := initCallBack(FRAR);
-  try
-    case FPassword = '' of FALSE: RARSetPassword(FRAR.handle, PAnsiChar(FPassword)); end;
-    result := listArchiveFiles(FRAR);
-  finally
-    vCBI.free;
-    closeArchive(FRAR.handle);
-  end;
-end;
-
-function TRAR.testArchiveFiles(const aRAR: TRARArchive): boolean;
+function testArchiveFiles(const aRAR: TRARArchive): boolean;
 begin
   var vHeaderDataEx := default(TRARHeaderDataEx);
   aRAR.progressInfo := default(TRARProgressInfo);
@@ -592,35 +517,116 @@ begin
   end;
 end;
 
-function TRAR.testArchive(const aFilePath: string): boolean;
+function listArchiveFiles(const aRAR: TRARArchive; bNotify: boolean = TRUE; const aOnListFile: TRAROnListFile = NIL): boolean;
+begin
+  var vHeaderDataEx := default(TRARHeaderDataEx);
+
+  try
+    repeat
+      case checkRARResult(RARReadHeaderEx(aRAR.handle, @vHeaderDataEx), roListFiles)     = RAR_SUCCESS  of FALSE: EXIT; end;  // get the next file header in the archive
+      case (processFileHeader(vHeaderDataEx, aRAR) = htFile) and bNotify and assigned(aOnListFile)      of  TRUE: aOnListFile(aRAR, aRAR.fileItem); end;
+      case checkRARResult(RARProcessFile(aRAR.handle, RAR_SKIP, NIL, NIL), roListFiles)  = RAR_SUCCESS  of FALSE: EXIT; end;  // do nothing - skip to next file header
+
+      application.processMessages;  // allow the user to actually press a cancel button
+    until aRAR.abort;               // RARReadHeaderEx = ERAR_END_ARCHIVE will usually exit the loop
+
+  finally
+    result := RR.lastResult = ERAR_END_ARCHIVE; // not an error in this case
+  end;
+end;
+
+function listFiles(const aFilePath: string; aRAR: TRARArchive; aOnListFile: TRAROnListFile = NIL; aOnPasswordRequired: TRAROnPasswordRequired = NIL): boolean;
+begin
+  result := openArchive(aFilePath, omRAR_OM_LIST, aRAR, TRUE);
+  case result of FALSE: EXIT; end;
+
+  initCallBack(aRAR, NIL, aOnPasswordRequired);
+  try
+    case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
+    result := listArchiveFiles(aRAR, TRUE, aOnListFile);
+  finally
+    closeArchive(aRAR.handle);
+  end;
+end;
+
+function testRARArchive(const aFilePath: string; aRAR: TRARArchive; aOnRARProgress: TRAROnProgress = NIL; aOnPasswordRequired: TRAROnPasswordRequired = NIL): boolean;
 begin
   begin
-    result := openArchive(aFilePath, getOpenMode(readMultiVolumeToEnd), FRAR, TRUE);
+    result := openArchive(aFilePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
     case result of FALSE: EXIT; end;
 
-    var vCBI := initCallBack(FRAR);
+    initCallBack(aRAR, NIL, aOnPasswordRequired);
     try
-      case FPassword = '' of FALSE: RARSetPassword(FRAR.handle, PAnsiChar(FPassword)); end;
-      result := listArchiveFiles(FRAR, FALSE); // get archive total unCompressedSize
+      case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
+      result := listArchiveFiles(aRAR, FALSE); // get archive total unCompressedSize
     finally
-      vCBI.free;
-      closeArchive(FRAR.handle);
+      closeArchive(aRAR.handle);
     end;
   end;
 
   begin
-    result := openArchive(aFilePath, omRAR_OM_EXTRACT, FRAR, FALSE);
+    result := openArchive(aFilePath, omRAR_OM_EXTRACT, aRAR, FALSE);
     case result of FALSE: EXIT; end;
 
-    var vCBI := initCallBack(FRAR);
+    initCallBack(aRAR, aOnRARProgress, aOnPasswordRequired);
     try
-      case FPassword = '' of FALSE: RARSetPassword(FRAR.handle, PAnsiChar(FPassword)); end;
-      result := testArchiveFiles(FRAR);
+      case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
+      result := testArchiveFiles(aRAR);
     finally
-      vCBI.free;
-      closeArchive(FRAR.handle);
+      closeArchive(aRAR.handle);
     end;
   end;
+end;
+
+{ TRAR }
+
+procedure TRAR.onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
+begin
+  debugString('FileName', aProgressInfo.FileName);
+  debugFormat('Archive Bytes: %d, Archive Bytes Done: %d', [aProgressInfo.ArchiveBytesTotal, aProgressInfo.ArchiveBytesDone]);
+  debugFormat('FileBytesTotal: %d, FileBytesDone: %d', [aProgressInfo.FileBytesTotal, aProgressInfo.FileBytesDone]);
+end;
+
+constructor TRAR.create(AOwner: TComponent);
+begin
+  inherited create(AOwner);
+
+  FRAR          := TRARArchive.create;
+
+  FOnProgress   := onRARProgressTest;
+end;
+
+destructor TRAR.Destroy;
+begin
+  case assigned(FRAR) of TRUE: FRAR.free; end;
+  inherited destroy;
+end;
+
+function TRAR.listArchive(const aFilePath: string): boolean;
+begin
+  result := listFiles(aFilePath, FRAR, FOnListFile, FOnPasswordRequired);
+end;
+
+procedure TRAR.setOnError(const Value: TRAROnErrorNotifyEvent);
+begin
+  RR.onError := value;
+end;
+
+procedure TRAR.setPassword(const Value: AnsiString);
+begin
+  FPassword     := value;
+  FRAR.password := value;
+end;
+
+procedure TRAR.setReadMVToEnd(const Value: boolean);
+begin
+  FReadMVToEnd      := value;
+  FRAR.readMVToEnd  := value;
+end;
+
+function TRAR.testArchive(const aFilePath: string): boolean;
+begin
+  result := testRARArchive(aFilePath, FRAR, FOnProgress, FOnPasswordRequired);
 end;
 
 function TRAR.getArchiveInfo: TRARArchiveInfo;
@@ -638,9 +644,14 @@ begin
   result := RARGetDLLVersion;
 end;
 
-function TRAR.getOnError: TOnRARErrorNotifyEvent;
+function TRAR.getOnError: TRAROnErrorNotifyEvent;
 begin
   result := RR.onError;
+end;
+
+function TRAR.getPassword: AnsiString;
+begin
+  result := FPassword;
 end;
 
 function TRAR.getReadMVToEnd: boolean;
@@ -656,15 +667,6 @@ end;
 function TRAR.getVersion: string;
 begin
   result := GVersion;
-end;
-
-function TRAR.initCallBack(const aRAR: TRARArchive): TCallBackInfo;
-begin
-  result                    := TCallBackInfo.create;
-  result.RAR                := aRAR;
-  result.onProgress         := FOnProgress;
-  result.onPasswordRequired := FOnPasswordRequired;
-  RARSetCallback(aRAR.handle, UnRarCallBack, LPARAM(result));
 end;
 
 { TRARArchive }
@@ -710,24 +712,24 @@ begin
   result := FLastResult;
 end;
 
-function TRARResult.getOnError: TOnRARErrorNotifyEvent;
+function TRARResult.getOnError: TRAROnErrorNotifyEvent;
 begin
   result := FOnError;
 end;
 
-procedure TRARResult.setOnError(const Value: TOnRARErrorNotifyEvent);
+procedure TRARResult.setOnError(const Value: TRAROnErrorNotifyEvent);
 begin
   FOnError := value;
 end;
 
 { TCallBackInfo }
 
-function TCallBackInfo.getOnPasswordRequired: TOnRARPasswordRequired;
+function TCallBackInfo.getOnPasswordRequired: TRAROnPasswordRequired;
 begin
   result := FOnPasswordRequired;
 end;
 
-function TCallBackInfo.getOnProgress: TOnRARProgress;
+function TCallBackInfo.getOnProgress: TRAROnProgress;
 begin
   result := FOnProgress;
 end;
@@ -737,12 +739,12 @@ begin
   result := FRAR;
 end;
 
-procedure TCallBackInfo.setOnPasswordRequired(const Value: TOnRARPasswordRequired);
+procedure TCallBackInfo.setOnPasswordRequired(const Value: TRAROnPasswordRequired);
 begin
   FOnPasswordRequired := value;
 end;
 
-procedure TCallBackInfo.setOnProgress(const Value: TOnRARProgress);
+procedure TCallBackInfo.setOnProgress(const Value: TRAROnProgress);
 begin
   FOnProgress := value;
 end;
