@@ -545,7 +545,7 @@ begin
           vExistentFile.FileName  := aFilePath + extractFileName(strPas(FHeaderDataEx.FileName));
 
         vExistentFile.Size := getFileSize(vExistentFile.FileName);
-        vExistentFile.Time := getFileModifyDate(vExistentFile.FileName);
+        vExistentFile.Time := getFileModifiedDate(vExistentFile.FileName);
 
         if bRestoreFolder then
           vArchiveFile.FileName := strPas(FHeaderDataEx.FileName)

@@ -42,7 +42,7 @@ uses
 
 type
   TRAROperation   = (roOpenArchive, roCloseArchive, roListFiles, roExtract, roTest);
-  TRARHeaderType  = (htFile, htDirectory);
+  TRARHeaderType  = (htFile, htDirectory, htSplitFile);
   TRAROpenMode    = (omRAR_OM_LIST, omRAR_OM_EXTRACT, omRAR_OM_LIST_INCSPLIT);
   TRARReplace     = (rrCancel, rrOverwrite, rrSkip);
 
@@ -189,14 +189,13 @@ type
     FRAR:                   TRARArchive;
 
     FPassword:              AnsiString;
+    FReadMVToEnd:           boolean;
 
     FOnListFile:            TRAROnListFile;
     FOnPasswordRequired:    TRAROnPasswordRequired;
     FOnNextVolumeRequired:  TRAROnNextVolumeRequired;
     FOnProgress:            TRAROnProgress;
     FOnReplace:             TRAROnReplace;
-
-    FReadMVToEnd:           boolean;
 
     function  getOnError:   TRAROnErrorNotifyEvent;
     procedure setOnError(const Value: TRAROnErrorNotifyEvent);
@@ -208,18 +207,17 @@ type
 
     function  getArchiveInfo: TRARArchiveInfo;
     function  getDLLVersion:  integer;
+  private
+    function  getReadMVToEnd: boolean;
+    procedure setReadMVToEnd(const Value: boolean);
+    function  getPassword: AnsiString;
+    procedure setPassword(const Value: AnsiString);
+
   public
     constructor create(AOwner: TComponent);
     destructor  destroy; override;
 
     procedure abort;
-  private
-    function  getReadMVToEnd: boolean;
-    procedure setReadMVToEnd(const Value: boolean);
-    function getPassword: AnsiString;
-    procedure setPassword(const Value: AnsiString);
-
-  public
     function  listArchive(const aFilePath:string):  boolean;
     function  testArchive(const aFilePath:string):  boolean;
 
@@ -278,6 +276,18 @@ begin
   try
 
     case msg of
+      UCM_CHANGEVOLUME:   begin
+                            case vCBI.RAR.ReadMVToEnd of FALSE: begin
+                                                                  result := RAR_CANCEL;
+                                                                  EXIT; end;end;
+
+                            case P2 of
+                              RAR_VOL_ASK:  begin
+                                            end;
+
+                              RAR_VOL_NOTIFY: debug('found next vol'); // occurs when next volume required and next part was found
+                            end;end;
+
       UCM_NEEDPASSWORD: begin
                           case assigned(vCBI.onPasswordRequired) of TRUE: vCBI.onPasswordRequired(vCBI.RAR, NOT vCBI.RAR.opened, vPasswordFile, vPassword, vCancel); end;
                           case vCancel of TRUE: result := RAR_CANCEL; end;
@@ -291,17 +301,12 @@ begin
                           case assigned(vCBI.onProgress) of TRUE: vCBI.onProgress(vCBI.RAR, vCBI.RAR.progressInfo); end;
                           case vCBI.RAR.abort of TRUE: result := RAR_CANCEL; end;
                         end;
+
     end;
 
   except
     MessageBox(0, 'It go Bang!', 'Bang!', MB_ICONEXCLAMATION or MB_OK);
   end;
-end;
-
-
-function closeArchive(const aArchiveHandle: THANDLE): boolean;
-begin
-  case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
 end;
 
 function getOpenMode(bReadMVToEnd: boolean): TRAROpenMode;
@@ -332,6 +337,96 @@ begin
   result.onProgress         := aOnProgress;
   result.onPasswordRequired := aOnPasswordRequired;
   RARSetCallback(aRAR.handle, UnRarCallBack, LPARAM(result));
+end;
+
+function processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType; // populate FArchiveInfo: TRARArchiveInfo and vFileItem: TRARFileItem from aHeaderDataEx
+var
+  ft:         _FILETIME;
+  st:         TSystemTime;
+  OS:         string;
+
+  function binToStr(const bin: array of byte): string;
+  begin
+    setLength(result, 2 * length(bin));
+    for var i := low(bin) to high(bin) do begin
+      result[i * 2 + 1] := lowerCase(intToHex(bin[i], 2))[1];
+      result[i * 2 + 2] := lowerCase(intToHex(bin[i], 2))[2];
+    end;
+  end;
+
+begin
+  // first part of the file
+  case (aRAR.readMVToEnd) and (NOT ((aFileHeaderDataEx.Flags AND $00000001) = $00000001)) and (((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
+    of TRUE: aRAR.info.packedSizeMVVolume := aFileHeaderDataEx.PackSize; end;
+
+  // NOT last, NOT first part
+  case (aRAR.readMVToEnd) and (((aFileHeaderDataEx.Flags AND $00000001) = $00000001))
+                          and (((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
+    of TRUE:  begin
+                inc(aRAR.info.packedSizeMVVolume, aFileHeaderDataEx.PackSize);
+                EXIT; end;end;
+
+  // last part
+  case (aRAR.readMVToEnd) and     (((aFileHeaderDataEx.Flags AND $00000001) = $00000001))
+                          and (NOT ((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
+    of TRUE: inc(aRAR.info.packedSizeMVVolume, aFileHeaderDataEx.PackSize); end;
+
+  // NOT last part
+  result := htSplitFile;
+  case (aRAR.readMVToEnd) and ((aFileHeaderDataEx.Flags AND $00000002) = $00000002)
+    of TRUE: EXIT; end;
+
+  case aRAR.info.archiverMajorVersion * 10 + aRAR.info.archiverMinorVersion < aFileHeaderDataEx.UnpVer
+    of TRUE:  begin
+                aRAR.info.archiverMinorVersion := aFileHeaderDataEx.UnpVer mod 10;
+                aRAR.info.archiverMajorVersion :=(aFileHeaderDataEx.UnpVer - aRAR.info.archiverMinorVersion) div 10; end;end;
+
+  case ((aFileHeaderDataEx.Flags AND $00000010) = $00000010)
+    of TRUE: aRAR.info.solid := TRUE; end;
+
+  OS:='unknown';
+  case aFileHeaderDataEx.HostOS of
+    0: OS:='DOS';
+    1: OS:='IBM OS/2';
+    2: OS:='Windows';
+    3: OS:='Unix';
+  end;
+  aRAR.info.HostOS := OS;
+
+  result := htDirectory;
+  case (aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory of TRUE: EXIT; end;
+  result := htFile;
+
+  inc(aRAR.info.totalFiles);
+  aRAR.info.dictionarySize := aFileHeaderDataEx.dictSize;
+
+  inc(aRAR.info.compressedSize,   aFileHeaderDataEx.packSize);
+  inc(aRAR.info.unCompressedSize, aFileHeaderDataEx.unpSize);
+
+  case ((aFileHeaderDataEx.Flags AND $00000001) = $00000001) or ((aFileHeaderDataEx.Flags AND $00000002) = $00000002)
+    of TRUE: aRAR.info.multiVolume := TRUE; end; // file continued in last or next part
+
+  aRAR.fileItem := default(TRARFileItem);
+  with aRAR.fileItem do begin
+    fileName          := strPas(aFileHeaderDataEx.fileName);
+    debug(fileName);
+    fileNameW         := aFileHeaderDataEx.fileNameW;
+    compressedSize    := aFileHeaderDataEx.packSize;
+    unCompressedSize  := aFileHeaderDataEx.unpSize;
+    hostOS            := OS;
+    CRC32             := format('%x',[aFileHeaderDataEx.fileCRC]);
+    attributes        := aFileHeaderDataEx.fileAttr;
+    comment           := aFileHeaderDataEx.cmtBuf;
+
+    dosDateTimeToFileTime(hiWord(aFileHeaderDataEx.fileTime), loWord(aFileHeaderDataEx.fileTime), ft);
+    fileTimeToSystemTime(ft, st);
+    time := systemTimeToDateTime(st);
+
+    compressionStrength := aFileHeaderDataEx.method;
+    archiverVersion     := aFileHeaderDataEx.unpVer;
+    encrypted           := (aFileHeaderDataEx.flags AND $00000004) = $00000004;
+    blake2              := binToStr(aFileHeaderDataEx.hash);
+  end;
 end;
 
 function processOpenArchive(const aOpenArchiveDataEx: TRAROpenArchiveDataEx; const aRAR: TRARArchive): boolean;
@@ -403,91 +498,40 @@ begin
   result := processOpenArchive(vOpenArchiveDataEx, aRAR);
 end;
 
-function processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType; // populate FArchiveInfo: TRARArchiveInfo and vFileItem: TRARFileItem from aHeaderDataEx
-var
-  ft:         _FILETIME;
-  st:         TSystemTime;
-  OS:         string;
-
-  function binToStr(const bin: array of byte): string;
-  begin
-    setLength(result, 2 * length(bin));
-    for var i := low(bin) to high(bin) do begin
-      result[i * 2 + 1] := lowerCase(intToHex(bin[i], 2))[1];
-      result[i * 2 + 2] := lowerCase(intToHex(bin[i], 2))[2];
-    end;
-  end;
-
+function closeArchive(const aArchiveHandle: THANDLE): boolean;
 begin
-  // first part of the file
-  case (aRAR.readMVToEnd) and (NOT ((aFileHeaderDataEx.Flags AND $00000001) = $00000001)) and (((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
-    of TRUE: aRAR.info.packedSizeMVVolume := aFileHeaderDataEx.PackSize; end;
+  case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
+end;
 
-  // NOT last, NOT first part
-  case (aRAR.readMVToEnd) and (((aFileHeaderDataEx.Flags AND $00000001) = $00000001))
-                          and (((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
-    of TRUE:  begin
-                inc(aRAR.info.packedSizeMVVolume, aFileHeaderDataEx.PackSize);
-                EXIT; end;end;
+function listArchiveFiles(const aRAR: TRARArchive; bNotify: boolean = TRUE; const aOnListFile: TRAROnListFile = NIL): boolean;
+begin
+  var vHeaderDataEx := default(TRARHeaderDataEx);
 
-  // last part
-  case (aRAR.readMVToEnd) and     (((aFileHeaderDataEx.Flags AND $00000001) = $00000001))
-                          and (NOT ((aFileHeaderDataEx.Flags AND $00000002) = $00000002))
-    of TRUE: inc(aRAR.info.packedSizeMVVolume, aFileHeaderDataEx.PackSize); end;
+  try
+    repeat
+      case checkRARResult(RARReadHeaderEx(aRAR.handle, @vHeaderDataEx), roListFiles)     = RAR_SUCCESS  of FALSE: EXIT; end;  // get the next file header in the archive
+      case (processFileHeader(vHeaderDataEx, aRAR) = htFile) and bNotify and assigned(aOnListFile)      of  TRUE: aOnListFile(aRAR, aRAR.fileItem); end;
+      case checkRARResult(RARProcessFile(aRAR.handle, RAR_SKIP, NIL, NIL), roListFiles)  = RAR_SUCCESS  of FALSE: EXIT; end;  // do nothing - skip to next file header
 
-  // NOT last part
-  case (aRAR.readMVToEnd) and ((aFileHeaderDataEx.Flags AND $00000002) = $00000002)
-    of TRUE: EXIT; end;
+      application.processMessages;  // allow the user to actually press a cancel button
+    until aRAR.abort;               // RARReadHeaderEx = ERAR_END_ARCHIVE will usually exit the loop
 
-  case aRAR.info.archiverMajorVersion * 10 + aRAR.info.archiverMinorVersion < aFileHeaderDataEx.UnpVer
-    of TRUE:  begin
-                aRAR.info.archiverMinorVersion := aFileHeaderDataEx.UnpVer mod 10;
-                aRAR.info.archiverMajorVersion :=(aFileHeaderDataEx.UnpVer - aRAR.info.archiverMinorVersion) div 10; end;end;
-
-  case ((aFileHeaderDataEx.Flags AND $00000010) = $00000010)
-    of TRUE: aRAR.info.solid := TRUE; end;
-
-  OS:='unknown';
-  case aFileHeaderDataEx.HostOS of
-    0: OS:='DOS';
-    1: OS:='IBM OS/2';
-    2: OS:='Windows';
-    3: OS:='Unix';
+  finally
+    result := RR.lastResult = ERAR_END_ARCHIVE; // not an error in this case
   end;
-  aRAR.info.HostOS := OS;
+end;
 
-  result := htDirectory;
-  case (aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory of TRUE: EXIT; end;
-  result := htFile;
+function listFiles(const aFilePath: string; aRAR: TRARArchive; aOnListFile: TRAROnListFile = NIL; aOnPasswordRequired: TRAROnPasswordRequired = NIL): boolean;
+begin
+  result := openArchive(aFilePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
+  case result of FALSE: EXIT; end;
 
-  inc(aRAR.info.totalFiles);
-  aRAR.info.dictionarySize := aFileHeaderDataEx.dictSize;
-
-  inc(aRAR.info.compressedSize,   aFileHeaderDataEx.packSize);
-  inc(aRAR.info.unCompressedSize, aFileHeaderDataEx.unpSize);
-
-  case ((aFileHeaderDataEx.Flags AND $00000001) = $00000001) or ((aFileHeaderDataEx.Flags AND $00000002) = $00000002)
-    of TRUE: aRAR.info.multiVolume := TRUE; end; // file continued in last or next part
-
-  aRAR.fileItem := default(TRARFileItem);
-  with aRAR.fileItem do begin
-    fileName          := strPas(aFileHeaderDataEx.fileName);
-    fileNameW         := aFileHeaderDataEx.fileNameW;
-    compressedSize    := aFileHeaderDataEx.packSize;
-    unCompressedSize  := aFileHeaderDataEx.unpSize;
-    hostOS            := OS;
-    CRC32             := format('%x',[aFileHeaderDataEx.fileCRC]);
-    attributes        := aFileHeaderDataEx.fileAttr;
-    comment           := aFileHeaderDataEx.cmtBuf;
-
-    dosDateTimeToFileTime(hiWord(aFileHeaderDataEx.fileTime), loWord(aFileHeaderDataEx.fileTime), ft);
-    fileTimeToSystemTime(ft, st);
-    time := systemTimeToDateTime(st);
-
-    compressionStrength := aFileHeaderDataEx.method;
-    archiverVersion     := aFileHeaderDataEx.unpVer;
-    encrypted           := (aFileHeaderDataEx.flags AND $00000004) = $00000004;
-    blake2              := binToStr(aFileHeaderDataEx.hash);
+  initCallBack(aRAR, NIL, aOnPasswordRequired);
+  try
+    case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
+    result := listArchiveFiles(aRAR, TRUE, aOnListFile);
+  finally
+    closeArchive(aRAR.handle);
   end;
 end;
 
@@ -514,38 +558,6 @@ begin
 
   finally
     result := RR.lastResult = ERAR_END_ARCHIVE; // not an error in this case
-  end;
-end;
-
-function listArchiveFiles(const aRAR: TRARArchive; bNotify: boolean = TRUE; const aOnListFile: TRAROnListFile = NIL): boolean;
-begin
-  var vHeaderDataEx := default(TRARHeaderDataEx);
-
-  try
-    repeat
-      case checkRARResult(RARReadHeaderEx(aRAR.handle, @vHeaderDataEx), roListFiles)     = RAR_SUCCESS  of FALSE: EXIT; end;  // get the next file header in the archive
-      case (processFileHeader(vHeaderDataEx, aRAR) = htFile) and bNotify and assigned(aOnListFile)      of  TRUE: aOnListFile(aRAR, aRAR.fileItem); end;
-      case checkRARResult(RARProcessFile(aRAR.handle, RAR_SKIP, NIL, NIL), roListFiles)  = RAR_SUCCESS  of FALSE: EXIT; end;  // do nothing - skip to next file header
-
-      application.processMessages;  // allow the user to actually press a cancel button
-    until aRAR.abort;               // RARReadHeaderEx = ERAR_END_ARCHIVE will usually exit the loop
-
-  finally
-    result := RR.lastResult = ERAR_END_ARCHIVE; // not an error in this case
-  end;
-end;
-
-function listFiles(const aFilePath: string; aRAR: TRARArchive; aOnListFile: TRAROnListFile = NIL; aOnPasswordRequired: TRAROnPasswordRequired = NIL): boolean;
-begin
-  result := openArchive(aFilePath, omRAR_OM_LIST, aRAR, TRUE);
-  case result of FALSE: EXIT; end;
-
-  initCallBack(aRAR, NIL, aOnPasswordRequired);
-  try
-    case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
-    result := listArchiveFiles(aRAR, TRUE, aOnListFile);
-  finally
-    closeArchive(aRAR.handle);
   end;
 end;
 
@@ -591,7 +603,8 @@ constructor TRAR.create(AOwner: TComponent);
 begin
   inherited create(AOwner);
 
-  FRAR          := TRARArchive.create;
+  FRAR                  := TRARArchive.create;
+  readMultiVolumeToEnd  := TRUE;
 
   FOnProgress   := onRARProgressTest;
 end;
@@ -605,6 +618,11 @@ end;
 function TRAR.listArchive(const aFilePath: string): boolean;
 begin
   result := listFiles(aFilePath, FRAR, FOnListFile, FOnPasswordRequired);
+end;
+
+function TRAR.testArchive(const aFilePath: string): boolean;
+begin
+  result := testRARArchive(aFilePath, FRAR, FOnProgress, FOnPasswordRequired);
 end;
 
 procedure TRAR.setOnError(const Value: TRAROnErrorNotifyEvent);
@@ -622,11 +640,6 @@ procedure TRAR.setReadMVToEnd(const Value: boolean);
 begin
   FReadMVToEnd      := value;
   FRAR.readMVToEnd  := value;
-end;
-
-function TRAR.testArchive(const aFilePath: string): boolean;
-begin
-  result := testRARArchive(aFilePath, FRAR, FOnProgress, FOnPasswordRequired);
 end;
 
 function TRAR.getArchiveInfo: TRARArchiveInfo;
