@@ -37,6 +37,7 @@ unit RAR;
 interface
 
 uses
+  {$IFDEF Win32}designEditors, designIntf,{$ENDIF}
   classes, sysUtils, windows,
   vcl.forms,
   RAR_DLL;
@@ -143,10 +144,10 @@ type
     procedure setOnPasswordRequired(const Value: TRAROnPasswordRequired);
     procedure setOnProgress(const Value: TRAROnProgress);
     procedure setRAR(const Value: TRARArchive);
-    property  RAR:                  TRARArchive             read getRAR                 write setRAR;
+    property  RAR:                  TRARArchive               read getRAR                 write setRAR;
     property  onNextVolRequired:    TRAROnNextVolumeRequired  read getOnNextVolRequired   write setOnNextVolRequired;
-    property  onPasswordRequired:   TRAROnPasswordRequired  read getOnPasswordRequired  write setOnPasswordRequired;
-    property  onProgress:           TRAROnProgress          read getOnProgress          write setOnProgress;
+    property  onPasswordRequired:   TRAROnPasswordRequired    read getOnPasswordRequired  write setOnPasswordRequired;
+    property  onProgress:           TRAROnProgress            read getOnProgress          write setOnProgress;
   end;
 
   TCallBackInfo = class(TInterfacedObject, ICallBackInfo)
@@ -226,7 +227,7 @@ type
     procedure setPassword(const Value: AnsiString);
 
   public
-    constructor create(AOwner: TComponent);
+    constructor create(AOwner: TComponent); override;
     destructor  destroy; override;
 
     procedure abort;
@@ -236,13 +237,14 @@ type
     function  prepareArchive(const aFilePath: string): boolean;
     function  testArchive(const aFilePath:string):      boolean;
 
-  published
-    property version: string read getVersion;
-    property readMultiVolumeToEnd:  boolean                   read getReadMVToEnd         write setReadMVToEnd; //if true, mv's will be read until last part of the file
-    //pro: display correct crc + display all files in all parts
-    //con: all volumes required means to open you have to insert all disk if not all volumes in same folder
+    property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
     property DLLName:               string                    read getDLLName;
     property DLLVersion:            integer                   read getDLLVersion;
+    //pro: report correct archive compressed size and list all files in all parts
+    //con: "all volumes required" means that to open, you have to insert all disks if not all volumes are in the same folder
+    property readMultiVolumeToEnd:  boolean                   read getReadMVToEnd         write setReadMVToEnd; //if true, mv's will be read until last part of the file
+  published
+    property version:               string                    read getVersion nodefault;
 
     property onError:               TRAROnErrorNotifyEvent    read getOnError             write setOnError;
     property onListFile:            TRAROnListFile            read FOnListFile            write FOnListFile;
@@ -251,27 +253,43 @@ type
     property onProgress:            TRAROnProgress            read FOnProgress            write FOnProgress;
     property onReplace:             TRAROnReplace             read FOnReplace             write FOnReplace;
 
-    property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
     property password:              AnsiString                read getPassword            write setPassword; // can be supplied by the user before calling an operation
   end;
+
+  {$IFDEF Win32}
+  TVersionPropertyEditor = class(TStringProperty)
+  public
+    function getAttributes: TPropertyAttributes; override;
+  end;
+  {$ENDIF}
+
 
 procedure Register;
 
 implementation
 
 //uses
-//  _debugWindow; // un-commenting this will activate the debug messages to BazDebugWindow (https://github.com/BazzaCuda/BazDebugWindow)
+//  _debugWindow; // un-commenting this will activate sending debug messages to BazDebugWindow if you have it installed (https://github.com/BazzaCuda/BazDebugWindow)
 
 const
-  GVersion='2.0';
+  gVersion = '2.0';
 
 var
   RR: IRARResult;
 
 procedure Register;
 begin
-  RegisterComponents('Philippe Wechsler', [TRAR]);
+  RegisterComponents('Baz Cuda', [TRAR]);
 end;
+
+
+{$IFDEF Win32}
+function TVersionPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  result := [paReadOnly, paValueList]; // Make it read-only and show as a list
+end;
+{$ENDIF}
+
 
 function checkRARResult(const aResultCode:integer; const aOperation: TRAROperation): integer;
 begin
@@ -880,7 +898,7 @@ end;
 
 function TRAR.getVersion: string;
 begin
-  result := GVersion;
+  result := gVersion;
 end;
 
 { TRARArchive }
@@ -991,5 +1009,6 @@ end;
 
 initialization
   RR := TRARResult.create;
+  {$IFDEF Win32}registerPropertyEditor(TypeInfo(string), TRAR, 'Version', TVersionPropertyEditor);{$ENDIF}
 
 end.

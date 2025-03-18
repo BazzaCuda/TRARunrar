@@ -25,15 +25,16 @@ package RARComponent_D12;
 {$IMAGEBASE $400000}
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'TRAR component and wrapper for unrar.dll'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 
 requires
-  vcl,
+  rtl,
   DesignIDE;
 
 contains
-  RAR in 'RAR.pas',
-  RAR_DLL in 'RAR_DLL.pas';
+  RAR in '..\RAR.pas',
+  RAR_DLL in '..\RAR_DLL.pas';
 
 end.

@@ -376,6 +376,7 @@ end;
 destructor TDLL.destroy;
 begin
   unloadDLL;
+  inherited destroy;
 end;
 
 function TDLL.dllName: string;
