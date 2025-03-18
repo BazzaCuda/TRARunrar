@@ -1,17 +1,18 @@
-  //  written by Philippe Wechsler 2008
+//  originally written by Philippe Wechsler in 2008
+//  completely re-written by Baz Cuda in 2025
 //
 //  web: www.PhilippeWechsler.ch
 //  mail: contact@PhilippeWechsler.ch
 //
 //  please see license.txt and documentation.txt
 //
-//  changes in 2.0 stable (2025, Baz Cuda - https://github.com/BazzaCuda)
+//  changes in 2.0 stable (2025, Baz Cuda - https://github.com/BazzaCuda/TRARunrar/)
 //  - support for both the 32-bit and 64-bit versions of unrar.dll
 //  - switched to using the ...Ex functions in unrar.dll to get added info
 //  - each file's checksum (e.g. Blake2) is now accessible
 //  - support for WideChar filenames in archives
 //  - reformatted the code and added significant amounts of whitespace for enhanced readability
-//  - completely refactored
+//  - completely refactored and rewritten
 //  - started a GoFundMe page to buy Philippe a keyboard with a space bar :D
 //
 //  changes in 1.2 stable
@@ -64,6 +65,10 @@ const
   ERAR_BAD_PASSWORD     = 24;
   ERAR_LARGE_DICT       = 25;
 
+  RAR_HASH_NONE         =  0;
+  RAR_HASH_CRC32        =  1;
+  RAR_HASH_BLAKE2       =  2;
+
   RAR_OM_LIST           =  0;
   RAR_OM_EXTRACT        =  1;
   RAR_OM_LIST_INCSPLIT  =  2;
@@ -77,22 +82,43 @@ const
 
   RAR_DLL_VERSION       =  3;
 
-//
-  RAR_COMMENT_EXISTS    =  1;
-  RAR_NO_COMMENT        =  0;
-  RAR_COMMENT_UNKNOWN   = 98;
-  RAR_DLL_LOAD_ERROR    = 99;
-  RAR_INVALID_HANDLE    =  0;
+  ROADF_VOLUME          = $0001;
+  ROADF_COMMENT         = $0002;
+  ROADF_LOCK            = $0004;
+  ROADF_SOLID           = $0008;
+  ROADF_NEWNUMBERING    = $0010;
+  ROADF_SIGNED          = $0020;
+  ROADF_RECOVERY        = $0040;
+  ROADF_ENCHEADERS      = $0080;
+  ROADF_FIRSTVOLUME     = $0100;
+
+  ROADOF_KEEPBROKEN     = $0001;
+
+  RHDF_SPLITBEFORE      = $01;
+  RHDF_SPLITAFTER       = $02;
+  RHDF_ENCRYPTED        = $04;
+  RHDF_SOLID            = $10;
+  RHDF_DIRECTORY        = $20;
 
   UCM_CHANGEVOLUME      =  0;
   UCM_PROCESSDATA       =  1;
   UCM_NEEDPASSWORD      =  2;
+  UCM_CHANGEVOLUMEW     =  3;
+  UCM_NEEDPASSWORDW     =  4;
+  UCM_LARGEDICT         =  5;
 
   RAR_MAX_COMMENT_SIZE  = 65536;
   RAR_MIN_VERSION       =  4;
 
   RAR_CANCEL            = -1;
   RAR_CONTINUE          =  0;
+
+//
+  RAR_COMMENT_EXISTS    =  1;
+  RAR_NO_COMMENT        =  0;
+  RAR_COMMENT_UNKNOWN   = 98;
+  RAR_DLL_LOAD_ERROR    = 99;
+  RAR_INVALID_HANDLE    =  0;
 
 type
   TProcessDataProc  = function(Addr: PByte; Size: integer): integer;
@@ -216,6 +242,8 @@ function getFileSize(const s: string): int64;
 function isSFX(const fileName:String): boolean;
 function RARDLLName: string;
 
+procedure initDLL;
+
 implementation
 
 type
@@ -240,11 +268,16 @@ type
   end;
 
 var
-  GDLL: IDLL;
+  gDLL: IDLL;
+
+procedure initDLL;
+begin
+  gDLL := TDLL.create;
+end;
 
 function RARDLLName: string;
 begin
-  result := GDLL.DLLName;
+  result := gDLL.DLLName;
 end;
 
 function getFileModifiedDate(const aFilePath:string): TDateTime;
@@ -362,8 +395,5 @@ begin
     FRARDLLInstance := 0;
   end;
 end;
-
-initialization
-  GDLL := TDLL.create;
 
 end.
