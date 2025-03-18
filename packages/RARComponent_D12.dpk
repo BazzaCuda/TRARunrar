@@ -1,6 +1,6 @@
 package RARComponent_D12;
-
 {$R *.res}
+{$R *.dres}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -27,7 +27,7 @@ package RARComponent_D12;
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'TRAR component and wrapper for unrar.dll'}
 {$DESIGNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,

@@ -65,6 +65,7 @@
         <DCC_CBuilderOutput>All</DCC_CBuilderOutput>
         <DesignOnlyPackage>true</DesignOnlyPackage>
         <SanitizedProjectName>RARComponent_D12</SanitizedProjectName>
+        <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
@@ -117,6 +118,10 @@
         <DCCReference Include="DesignIDE.dcp"/>
         <DCCReference Include="..\RAR.pas"/>
         <DCCReference Include="..\RAR_DLL.pas"/>
+        <RcItem Include="TRAR.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TRAR</ResourceId>
+        </RcItem>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

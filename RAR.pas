@@ -37,7 +37,7 @@ unit RAR;
 interface
 
 uses
-  {$IFDEF Win32}designEditors, designIntf,{$ENDIF}
+  {$IFDEF Win32}designEditors, designIntf,{$ENDIF} // for the Delphi IDE only
   classes, sysUtils, windows,
   vcl.forms,
   RAR_DLL;
@@ -197,6 +197,7 @@ type
   end;
 
 type
+  [ComponentPlatforms(pidWin32 or pidWin64)]
   TRAR = class(TComponent)
   strict private
     FRAR:                   TRARArchive;
@@ -256,15 +257,15 @@ type
     property password:              AnsiString                read getPassword            write setPassword; // can be supplied by the user before calling an operation
   end;
 
-  {$IFDEF Win32}
+  {$IFDEF Win32} // for the Delphi IDE only
   TVersionPropertyEditor = class(TStringProperty)
   public
     function getAttributes: TPropertyAttributes; override;
   end;
+
+
+  procedure Register;
   {$ENDIF}
-
-
-procedure Register;
 
 implementation
 
@@ -277,13 +278,13 @@ const
 var
   RR: IRARResult;
 
+{$IFDEF Win32} // for the Delphi IDE only
 procedure Register;
 begin
   RegisterComponents('Baz Cuda', [TRAR]);
 end;
 
 
-{$IFDEF Win32}
 function TVersionPropertyEditor.GetAttributes: TPropertyAttributes;
 begin
   result := [paReadOnly, paValueList]; // Make it read-only and show as a list
@@ -401,6 +402,7 @@ begin
   case (aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory of TRUE: EXIT; end;
 
   result := htSplitFile;
+  case aRAR.ReadMVToEnd of TRUE:
   begin
                   // a split file continued from the previous part of this archive or continued in the next part of this archive
                   // will have multiple file headers, each with a portion of the compressed size, so we have to total them all to get the correct size for the file
@@ -429,7 +431,7 @@ begin
                               of TRUE: inc(aRAR.info.packedSizeMVVolume, aFileHeaderDataEx.PackSize); end;
 
                   end;end;
-  end;
+  end;end;
 
   result := htFile; // now we can notify via FOnListFile
 
@@ -672,9 +674,9 @@ begin
 end;
 
 
-function extractPreparedRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; aRAR: TRARArchive; aOnRARProgress:       TRAROnProgress            = NIL;
-                                                                                                                                aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
-                                                                                                                                aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
+function extractPreparedRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
+                                                                                                                                    aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
+                                                                                                                                    aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 begin
   begin
     result := openArchive(aFilePath, omRAR_OM_EXTRACT, aRAR, FALSE);
@@ -1009,6 +1011,6 @@ end;
 
 initialization
   RR := TRARResult.create;
-  {$IFDEF Win32}registerPropertyEditor(TypeInfo(string), TRAR, 'Version', TVersionPropertyEditor);{$ENDIF}
+  {$IFDEF Win32}registerPropertyEditor(TypeInfo(string), TRAR, 'Version', TVersionPropertyEditor);{$ENDIF} // for the Delphi IDE only
 
 end.
