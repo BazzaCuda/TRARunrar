@@ -6,7 +6,9 @@ listArchive, testArchive and extractArchive tested and working against the lates
 
 Full PDF documentation to follow.
 
-TRAR as a Delphi IDE component has now been added. It works just as well as standalone, included (i.e. "uses") units in a Delphi project. The TRAR IDE component has been included in keeping with Phillipe's original.
+TRAR as a Delphi IDE component has now been added. 
+TRAR works just as well as standalone, included (i.e. "uses") units in a Delphi project. 
+The TRAR IDE component has been included in keeping with Phillipe's original.
 
 A basic test project is included which will be enhanced based on feedback.
 
