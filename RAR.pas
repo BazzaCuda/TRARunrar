@@ -82,7 +82,7 @@ type
 
   TRAROnErrorNotifyEvent    = procedure(Sender: TObject; const aErrorCode: integer; const aOperation: TRAROperation) of object;
   TRAROnListFile            = procedure(Sender: TObject; const aFileInformation: TRARFileItem) of object;
-  TRAROnPasswordRequired    = procedure(Sender: TObject; const aHeaderPassword: boolean; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
+  TRAROnPasswordRequired    = procedure(Sender: TObject; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
   TRAROnNextVolumeRequired  = procedure(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean) of object;
   TRAROnProgress            = procedure(Sender: TObject; const aProgressInfo: TRARProgressInfo) of object;
   TRAROnReplace             = procedure(Sender: TObject; const aExistingData:TRARReplaceData; aNewData:TRARReplaceData; out oAction: TRARReplace) of object;
@@ -239,7 +239,7 @@ type
     procedure clearFiles;
     function  fileCount: integer;
 
-    function  extractArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string):  boolean;
+    function  extractArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string = ''):  boolean;
     function  extractPreparedArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string): boolean;
     function  listArchive(const aFilePath:string):      boolean;
     function  prepareArchive(const aFilePath: string):  boolean;
@@ -259,7 +259,7 @@ type
     property onPasswordRequired:    TRAROnPasswordRequired    read FOnPasswordRequired    write FOnPasswordRequired;
     property onNextVolumeRequired:  TRAROnNextVolumeRequired  read FOnNextVolumeRequired  write FOnNextVolumeRequired;
     property onProgress:            TRAROnProgress            read FOnProgress            write FOnProgress;
-    property onReplace:             TRAROnReplace             read FOnReplace             write FOnReplace;
+//    property onReplace:             TRAROnReplace             read FOnReplace             write FOnReplace;
 
     property password:              AnsiString                read getPassword            write setPassword; // can be supplied by the user before calling an operation
   end;
@@ -335,7 +335,7 @@ begin
 
       UCM_NEEDPASSWORD: begin
                           vFileName := vCBI.RAR.info.fileName;
-                          case assigned(vCBI.onPasswordRequired) of TRUE: vCBI.onPasswordRequired(vCBI.RAR, NOT vCBI.RAR.opened, vFileName, vPassword, vCancel); end;
+                          case assigned(vCBI.onPasswordRequired) of TRUE: vCBI.onPasswordRequired(vCBI.RAR, vFileName, vPassword, vCancel); end;
                           case vCancel of TRUE: result := RAR_CANCEL; end;
                           strPCopy(Pointer(P1), copy(vPassword, 1, P2)); // P1 = pointer to the password buffer in unrar; P2 = maximum size of the buffer
                         end;
@@ -826,7 +826,7 @@ begin
   inherited destroy;
 end;
 
-function TRAR.extractArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string): boolean;
+function TRAR.extractArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string = ''): boolean;
 begin
   var vFolderPath := aFolderPath;
   case (length(vFolderPath) > 0) and (vFolderPath[length(vFolderPath)] <> '\') of TRUE: vFolderPath := vFolderPath + '\'; end;
