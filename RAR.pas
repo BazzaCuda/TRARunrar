@@ -211,6 +211,8 @@ type
     FOnProgress:            TRAROnProgress;
     FOnReplace:             TRAROnReplace;
 
+    FFiles:                 TStringList;
+
     function  getOnError:   TRAROnErrorNotifyEvent;
     procedure setOnError(const Value: TRAROnErrorNotifyEvent);
 
@@ -232,10 +234,15 @@ type
     destructor  destroy; override;
 
     procedure abort;
+
+    procedure addFile(const aFile: string);
+    procedure clearFiles;
+    function  fileCount: integer;
+
     function  extractArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string):  boolean;
-    function  extractPreparedArchive(const aFilePath, aFolderPath, aFileName: string): boolean;
+    function  extractPreparedArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string): boolean;
     function  listArchive(const aFilePath:string):      boolean;
-    function  prepareArchive(const aFilePath: string): boolean;
+    function  prepareArchive(const aFilePath: string):  boolean;
     function  testArchive(const aFilePath:string):      boolean;
 
     property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
@@ -297,7 +304,7 @@ begin
   result := RR.checkRARResult(aResultCode, aOperation);
 end;
 
-function UnRarCallBack(msg: cardinal; userData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+function unRarCallBack(msg: cardinal; userData: LPARAM; P1: LPARAM; P2: LPARAM): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 var
   vCancel:    boolean;
   vFileName:  AnsiString;
@@ -378,7 +385,7 @@ begin
   result.onNextVolRequired  := aOnNextVolRequired;
   result.onProgress         := aOnProgress;
   result.onPasswordRequired := aOnPasswordRequired;
-  RARSetCallback(aRAR.handle, UnRarCallBack, LPARAM(result));
+  RARSetCallback(aRAR.handle, unRarCallBack, LPARAM(result));
 end;
 
 function processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType; // populate FArchiveInfo: TRARArchiveInfo and vFileItem: TRARFileItem from aHeaderDataEx
@@ -564,7 +571,7 @@ begin
   case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
 end;
 
-function extractArchiveFiles(const aFolderPath: string; const aFileName: string; const aRAR: TRARArchive): boolean;
+function extractArchiveFiles(const aFolderPath: string; const aFileName: string; const aFiles: TStringList; const aRAR: TRARArchive): boolean;
 // perform the extract operation
 begin
   var vHeaderDataEx := default(TRARHeaderDataEx);
@@ -587,7 +594,9 @@ begin
       aRAR.progressInfo.FileName        := vHeaderDataEx.FileNameW; // aRAR.info.fileNameW
 
       var vUnrarOp := RAR_SKIP;
-      case (aFileName = '') or sameText(aFileName, vHeaderDataEx.fileNameW) of TRUE: vUnrarOp := RAR_EXTRACT; end;
+      case aFiles.count = 0 of   TRUE: case (aFileName = '') or sameText(aFileName, vHeaderDataEx.fileNameW)  of TRUE: vUnrarOp := RAR_EXTRACT; end;
+                                FALSE: case aFiles.indexOf(vHeaderDataEx.fileNameW) <> -1                     of TRUE: vUnrarOp := RAR_EXTRACT; end;end;
+
       case checkRARResult(RARProcessFileW(aRAR.handle, vUnrarOp,  PWideChar(aFolderPath), NIL), roTest)  = RAR_SUCCESS of FALSE: EXIT; end;
 
       application.processMessages; // allow the user to actually press a cancel button
@@ -600,9 +609,10 @@ end;
 
 function listArchiveFiles(const aRAR: TRARArchive; bNotify: boolean = TRUE; const aOnListFile: TRAROnListFile = NIL): boolean; forward;
 
-function extractRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
-                                                                                                                            aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
-                                                                                                                            aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
+function extractRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
+                                 aOnRARProgress:       TRAROnProgress            = NIL;
+                                 aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
+                                 aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 // setup the extract operation
 begin
   begin
@@ -625,7 +635,7 @@ begin
     initCallBack(aRAR, aOnRARProgress, aOnPasswordRequired, aOnNextVolRequired);
     try
       case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
-      result := extractArchiveFiles(aFolderPath, aFileName, aRAR); // perform the extract operation
+      result := extractArchiveFiles(aFolderPath, aFileName, aFiles, aRAR); // perform the extract operation
     finally
       closeArchive(aRAR.handle);
     end;
@@ -674,9 +684,10 @@ begin
 end;
 
 
-function extractPreparedRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
-                                                                                                                                    aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
-                                                                                                                                    aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
+function extractPreparedRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
+                                         aOnRARProgress:       TRAROnProgress            = NIL;
+                                         aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
+                                         aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 begin
   begin
     result := openArchive(aFilePath, omRAR_OM_EXTRACT, aRAR, FALSE);
@@ -685,7 +696,7 @@ begin
     initCallBack(aRAR, aOnRARProgress, aOnPasswordRequired, aOnNextVolRequired);
     try
       case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
-      result := extractArchiveFiles(aFolderPath, aFileName, aRAR); // perform the extract operation
+      result := extractArchiveFiles(aFolderPath, aFileName, aFiles, aRAR); // perform the extract operation
     finally
       closeArchive(aRAR.handle);
     end;
@@ -781,6 +792,16 @@ begin
   {$ENDIF}
 end;
 
+procedure TRAR.addFile(const aFile: string);
+begin
+  FFiles.add(aFile);
+end;
+
+procedure TRAR.clearFiles;
+begin
+  FFiles.clear;
+end;
+
 constructor TRAR.create(AOwner: TComponent);
 begin
   inherited create(AOwner);
@@ -790,12 +811,18 @@ begin
   FRAR                  := TRARArchive.create;
   readMultiVolumeToEnd  := TRUE;
 
+  FFiles                := TStringList.create;
+  FFiles.sorted         := FALSE;
+  FFiles.duplicates     := dupIgnore;
+  FFiles.caseSensitive  := FALSE;
+
   FOnProgress           := onRARProgressTest;
 end;
 
 destructor TRAR.Destroy;
 begin
-  case assigned(FRAR) of TRUE: FRAR.free; end;
+  case assigned(FRAR)   of TRUE: FRAR.free; end;
+  case assigned(FFiles) of TRUE: FFiles.free; end;
   inherited destroy;
 end;
 
@@ -812,7 +839,7 @@ begin
 
   ForceDirectories(vFolderPath);
 
-  result := extractRARArchive(aFilePath, vFolderPath, aFileName, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
+  result := extractRARArchive(aFilePath, vFolderPath, aFileName, FFiles, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
 end;
 
 function TRAR.extractPreparedArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string): boolean;
@@ -828,7 +855,12 @@ begin
 
   ForceDirectories(vFolderPath);
 
-  result := extractPreparedRARArchive(aFilePath, vFolderPath, aFileName, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
+  result := extractPreparedRARArchive(aFilePath, vFolderPath, aFileName, FFiles, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
+end;
+
+function TRAR.fileCount: integer;
+begin
+  result := FFiles.count;
 end;
 
 function TRAR.listArchive(const aFilePath: string): boolean;
