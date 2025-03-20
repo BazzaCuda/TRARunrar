@@ -60,9 +60,9 @@ Getting information about each file in a RAR archive:
 
   ...
 
-  procedure TIndexer.RARListFile(const fileItem: TRARFileItem);
+  procedure TIndexer.RARListFile(const aFileItem: TRARFileItem);
   begin
-    memo1.lines.add(fileItem.fileName);
+    memo1.lines.add(aFileItem.fileName);
   end;
 
   ...
@@ -133,7 +133,7 @@ Receiving error codes:
 Receiving feedback during RAR operations:
 ```Delphi
   TRARProgressInfo = record // defined in RAR.pas
-    fileName:           WideString;
+    fileName:           WideString; // the full path to the file within the RAR archive
     archiveBytesTotal:  LongInt;
     archiveBytesDone:   LongInt;
     fileBytesTotal:     LongInt;
