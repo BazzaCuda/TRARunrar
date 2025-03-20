@@ -114,7 +114,7 @@ On Request:
   procedure TIndexer.RARPasswordRequired(const aFileName: AnsiString; out oNewPassword: AnsiString; out oCancel: boolean);
   begin
     case aFileName = 'I_know_this_pw.txt' of  TRUE: oNewPassword := 'this is the password';
-                                             FALSE: oCancel := TRUE;
+                                             FALSE: oCancel      := TRUE;
     end;
   end;
 ```
