@@ -133,7 +133,7 @@ Receiving error codes:
 Receiving feedback during RAR operations:
 ```Delphi
   TRARProgressInfo = record // defined in RAR.pas
-    fileName:           WideString;
+    fileName:           WideString; // the full path to the file within the RAR archive
     archiveBytesTotal:  LongInt;
     archiveBytesDone:   LongInt;
     fileBytesTotal:     LongInt;
