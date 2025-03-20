@@ -142,7 +142,8 @@ Receiving feedback during RAR operations:
 
   RAR.onProgress := RARProgress; // must be procedure of object
   ...
-  // this gets called periodically during UnRAR.dll's processing, typically after each 4MB chunk of data
+  // this gets called periodically during UnRAR.dll's processing, typically after each 4MB chunk of data (4,194,304 bytes)
+  // onProgress will be called once only for each file that is smaller than this.
   procedure TIndexer.RARProgress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
   begin
     // Sender is the TRAR object instance
