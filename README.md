@@ -18,7 +18,7 @@ My Extractor application (https://github.com/BazzaCuda/Extractor) contains a wra
 
 Of course, big thanks are due to Phillipe for his original 32-bit component, some 16 years ago!
 
-N.B. The code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll, as appropriate, so you can easily switch between compiling and running your application for either architecture; both are included for download in this project's releases.
+_N.B. If you download the DLL from rarlab.com, the code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll, as appropriate, so that you can easily switch between compiling and running your application for either architecture; both DLLs are included for download in this project's releases._
 
 -----------
 
@@ -94,3 +94,32 @@ Extracting a list of files from a RAR archive:
   RAR.extractPreparedArchive(archiveFile, extractPath);
   RAR.clearFiles; // good practice as this list takes precedence over specifyig an individual file with RAR.extractArchive(archiveFile, extractPath, filePath);
 ```
+
+Providing a password:
+
+You can either provide a password up-front before calling the RAR operation, or you can provide the password when TRAR requests it.
+
+Up-Front:
+```Delphi
+  RAR.password := 'this is the pw';
+  RAR.testArchive(archivePath);
+```
+
+On Request:
+```Delphi
+  RAR.onPasswordRequired  := RARPasswordRequired; // must be procedure of object
+
+  ...
+
+  procedure TIndexer.RARPasswordRequired(const aFileName: AnsiString; out oNewPassword: AnsiString; out oCancel: boolean);
+  begin
+    case aFileName = 'I_know_this_pw.txt' of  TRUE: oNewPassword := 'this is the password';
+                                             FALSE: oCancel := TRUE;
+    end;
+  end;
+```
+
+
+
+  
+
