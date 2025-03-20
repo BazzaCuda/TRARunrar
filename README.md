@@ -107,7 +107,7 @@ Up-Front:
 
 On Request:
 ```Delphi
-  RAR.onPasswordRequired  := RARPasswordRequired; // must be procedure of object
+  RAR.onPasswordRequired := RARPasswordRequired; // must be procedure of object
 
   ...
 
@@ -118,6 +118,37 @@ On Request:
     end;
   end;
 ```
+
+Receiving error codes:
+```Delphi
+  RAR.onError := RARError; // must be procedure of object
+  ...
+  // the error codes and operations are defined in RAR_DLL.pas
+  procedure TForm1.RAR1Error(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
+  begin
+    lblError.caption := format('code: %d, operation: %d', [aErrorCode, aOperation]);
+  end;
+```
+
+Receiving feedback during RAR operations:
+```Delphi
+  TRARProgressInfo = record // defined in RAR.pas
+    fileName:           WideString;
+    archiveBytesTotal:  LongInt;
+    archiveBytesDone:   LongInt;
+    fileBytesTotal:     LongInt;
+    fileBytesDone:      LongInt;
+  end;
+
+  RAR.onProgress := RARProgress; // must be procedure of object
+  ...
+  // this gets called periodically during UnRAR.dll's processing, typically after each 4K chunk of data
+  procedure TIndexer.RARProgress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
+  begin
+    // N.B. excessive updating of labels and progressBars can have a detrimental effect on operational speed 
+  end;
+```
+
 
 
 
