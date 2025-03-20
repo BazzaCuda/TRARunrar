@@ -541,12 +541,12 @@ begin
   result := TRUE;
 end;
 
-function openArchive(const aFilePath: string; const aOpenMode: TRAROpenMode; const aRAR: TRARArchive; bInitArchive: boolean): boolean;
+function openArchive(const aArchivePath: string; const aOpenMode: TRAROpenMode; const aRAR: TRARArchive; bInitArchive: boolean): boolean;
 begin
   case bInitArchive of TRUE: initArchive(aRAR); end;
 
-  aRAR.info.fileName  := aFilePath;
-  aRAR.info.fileNameW := aFilePath;
+  aRAR.info.fileName  := aArchivePath;
+  aRAR.info.fileNameW := aArchivePath;
 
   result := FALSE;
 
@@ -672,12 +672,12 @@ begin
   end;
 end;
 
-function listRARFiles(const aFilePath: string; aRAR: TRARArchive;   aOnListFile:         TRAROnListFile           = NIL;
+function listRARFiles(const aArchivePath: string; aRAR: TRARArchive;   aOnListFile:         TRAROnListFile           = NIL;
                                                                     aOnPasswordRequired: TRAROnPasswordRequired   = NIL;
                                                                     aOnNextVolRequired:  TRAROnNextVolumeRequired = NIL): boolean;
 // setup the list operation
 begin
-  result := openArchive(aFilePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
+  result := openArchive(aArchivePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
   case result of FALSE: EXIT; end;
 
   initCallBack(aRAR, NIL, aOnPasswordRequired, aOnNextVolRequired);
@@ -690,13 +690,13 @@ begin
 end;
 
 
-function extractPreparedRARArchive(const aFilePath: string; const aFolderPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
+function extractPreparedRARArchive(const aArchivePath: string; const aFolderPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
                                          aOnRARProgress:       TRAROnProgress            = NIL;
                                          aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
                                          aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 begin
   begin
-    result := openArchive(aFilePath, omRAR_OM_EXTRACT, aRAR, FALSE);
+    result := openArchive(aArchivePath, omRAR_OM_EXTRACT, aRAR, FALSE);
     case result of FALSE: EXIT; end;
 
     initCallBack(aRAR, aOnRARProgress, aOnPasswordRequired, aOnNextVolRequired);
@@ -709,13 +709,13 @@ begin
   end;
 end;
 
-function prepareRARArchive(const aFilePath: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
+function prepareRARArchive(const aArchivePath: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
                                                                         aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
                                                                         aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 // setup the extract operation
 begin
   begin
-    result := openArchive(aFilePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
+    result := openArchive(aArchivePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
     case result of FALSE: EXIT; end;
 
     initCallBack(aRAR, NIL, aOnPasswordRequired, aOnNextVolRequired);
@@ -755,13 +755,13 @@ begin
   end;
 end;
 
-function testRARArchive(const aFilePath: string; aRAR: TRARArchive; aOnRARProgress:       TRAROnProgress            = NIL;
+function testRARArchive(const aArchivePath: string; aRAR: TRARArchive; aOnRARProgress:       TRAROnProgress            = NIL;
                                                                     aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
                                                                     aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 // setup the test operation
 begin
   begin
-    result := openArchive(aFilePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
+    result := openArchive(aArchivePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
     case result of FALSE: EXIT; end;
 
     initCallBack(aRAR, NIL, aOnPasswordRequired, aOnNextVolRequired);
@@ -774,7 +774,7 @@ begin
   end;
 
   begin
-    result := openArchive(aFilePath, omRAR_OM_EXTRACT, aRAR, FALSE);
+    result := openArchive(aArchivePath, omRAR_OM_EXTRACT, aRAR, FALSE);
     case result of FALSE: EXIT; end;
 
     initCallBack(aRAR, aOnRARProgress, aOnPasswordRequired, aOnNextVolRequired);
@@ -838,8 +838,8 @@ begin
   case (length(vExtractPath) > 0) and (vExtractPath[length(vExtractPath)] <> '\') of TRUE: vExtractPath := vExtractPath + '\'; end;
 
   {$IF BazDebugWindow}
-  debugString('aFilePath', aFilePath);
-  debugString('vFolderPath', vFolderPath);
+  debugString('aArchiePath', aArchivePath);
+  debugString('vExtractPath', vExtractPath);
   debugString('aFileName', aFileName);
   {$ENDIF}
 
@@ -854,8 +854,8 @@ begin
   case (length(vExtractPath) > 0) and (vExtractPath[length(vExtractPath)] <> '\') of TRUE: vExtractPath := vExtractPath + '\'; end;
 
   {$IF BazDebugWindow}
-  debugString('aFilePath', aFilePath);
-  debugString('vFolderPath', vFolderPath);
+  debugString('aArchivePath', aArchivePath);
+  debugString('vExtractPath', vExtractPath);
   debugString('aFileName', aFileName);
   {$ENDIF}
 
