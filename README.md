@@ -60,9 +60,9 @@ Getting information about each file in a RAR archive:
 
   ...
 
-  procedure TIndexer.RARListFile(const fileItem: TRARFileItem);
+  procedure TIndexer.RARListFile(const aFileItem: TRARFileItem);
   begin
-    memo1.lines.add(fileItem.fileName);
+    memo1.lines.add(aFileItem.fileName);
   end;
 
   ...
