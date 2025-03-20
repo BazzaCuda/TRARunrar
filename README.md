@@ -10,7 +10,7 @@ TRAR as a Delphi IDE component has now been added.
 TRAR works just as well when used as standalone, included (i.e. "uses") units in a Delphi project. 
 TRAR as a Delphi IDE component has been included in keeping with Phillipe's original.
 
-A basic test project is included which will be enhanced based on feedback.
+A basic test project is included which will be enhanced based on feedback. TRAR has been, and continues to be, extensively used and tested in my own projects, which are not currently open source. I hope to rectify that in due course.
 
 **Updates, comments and suggestions always welcome on the [Issues](https://github.com/BazzaCuda/TRARunrar/issues) page.**
 
