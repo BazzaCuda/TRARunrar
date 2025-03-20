@@ -146,7 +146,8 @@ Receiving feedback during RAR operations:
   procedure TIndexer.RARProgress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
   begin
     // Sender is the TRAR object instance
-    // N.B. excessive updating of labels and progressBars can have a detrimental effect on operational speed 
+    // N.B. excessive updating of labels and progressBars can have a detrimental effect on operational speed
+    //      especially when extracting a long list of files (see addFile() above) 
   end;
 ```
 
