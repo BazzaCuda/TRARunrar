@@ -27,6 +27,22 @@ Example usage:
 ```Delphi
 uses
   RAR, RAR_DLL;
+
+type
+  TUI = class(TForm)
+  strict private
+    FRAR: TRAR;
+  property
+    RAR: TRAR read FRAR write FRAR;
+  end; 
+
+  procedure TUI.FormCreate(Sender: TObject);
+  begin
+    RAR                     := TRAR.create(SELF);
+    RAR.onError             := RARError;
+    RAR.onListFile          := RARListFile;
+    RAR.onPasswordRequired  := RARPasswordRequired;
+  end;
 ```
 
 Testing a RAR archive: 
