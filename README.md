@@ -145,10 +145,30 @@ Receiving feedback during RAR operations:
   // this gets called periodically during UnRAR.dll's processing, typically after each 4K chunk of data
   procedure TIndexer.RARProgress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
   begin
-    // Sender is the RAR object instance
+    // Sender is the TRAR object instance
     // N.B. excessive updating of labels and progressBars can have a detrimental effect on operational speed 
   end;
 ```
+
+Multi-Volume RAR archives:
+
+These days, all the files of a multi-volume RAR archive (archive.part1.rar, archive.part2.rar, etc) will typically be in the same folder together and named correctly.
+
+If this is the case, TRAR and unrar.dll will handle multi-volume RAR archives automatically. This applies to RAR archives that are numbered starting with ...part1.rar, or ...part01.rar, or ...part001.rar, etc.
+
+On the rare occasion that they're in different locations, or the secondary parts haven't all been named uniformally, you can get TRAR to ask you for the full path to the next volume:
+```Delphi
+  RAR.onNextVolRequired := RARNextVolRequired; // must be procedure of object;
+  ...
+  procedure RARNextVolRequired(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean);
+  begin
+    // Sender is the TRAR object instance
+    case aRequiredFileName = 'myarchive.part6.rar' of  TRUE: oNewFileName := 'C:\Windows\System32\Whats_It_Doing_Here.part006.rar';
+                                                      FALSE: oCancel      := TRUE; // no idea where it is
+    end;
+  end;
+```
+  
 
 
 
