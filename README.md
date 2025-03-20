@@ -7,8 +7,8 @@ listArchive, testArchive and extractArchive tested and working against the lates
 Full documentation to follow: see below for usage examples.
 
 TRAR as a Delphi IDE component has now been added. 
-TRAR works just as well when used as standalone, included (i.e. "uses") units in a Delphi project. 
-TRAR as a Delphi IDE component has been included in keeping with Phillipe's original.
+TRAR works just as well when used as standalone, included (i.e. "uses") units in a Delphi project, which is how I use it in my own projects. 
+TRAR as a Delphi IDE component has been included purely in keeping with Phillipe's original.
 
 A basic test project is included which will be enhanced based on feedback. TRAR has been, and continues to be, extensively used and tested in my own projects, which are not currently open source. I hope to rectify that in due course.
 
@@ -26,7 +26,23 @@ Example usage:
 
 ```Delphi
 uses
-  RAR, RAR_DLL;
+  RAR;
+
+type
+  TUI = class(TForm)
+  strict private
+    FRAR: TRAR;
+  property
+    RAR: TRAR read FRAR write FRAR;
+  end; 
+
+  procedure TUI.FormCreate(Sender: TObject);
+  begin
+    RAR                     := TRAR.create(SELF);
+    RAR.onError             := RARError;
+    RAR.onListFile          := RARListFile;
+    RAR.onPasswordRequired  := RARPasswordRequired;
+  end;
 ```
 
 Testing a RAR archive: 
@@ -34,10 +50,49 @@ Testing a RAR archive:
 case RAR.testArchive(archivePath) of FALSE: showMessage('Test Failed!'); end;
 ```
 
+Getting information about the RAR archive:
+
+```Delphi
+
+  TRARArchiveInfo = record // defined in RAR.pas
+    fileName:             Ansistring;
+    fileNameW:            WideString;
+
+    volume:               boolean;
+    archiveComment:       boolean;
+    locked:               boolean;
+    solid:                boolean;
+    newNumbering:         boolean;
+    signed:               boolean;
+    recovery:             boolean;
+    headerEncrypted:      boolean;
+    firstVolume:          boolean;
+    SFX:                  boolean;
+    
+    packedSizeMVVolume:   cardinal;
+    archiverMajorVersion: cardinal;
+    archiverMinorVersion: cardinal;
+    hostOS:               string;
+    totalFiles:           integer;
+    dictionarySize:       int64;
+    compressedSize:       int64;
+    unCompressedSize:     int64;
+    multiVolume:          boolean;
+    fileComment:          boolean;
+  end;
+
+  ...
+
+// use prepareArchive to populate the TRARArchiveInfo record if you haven't yet performed one
+// of the other RAR operations such as testArchive, listArchive, extractArchive
+  RAR.prepareArchive(archivePath);
+  chbHeaderEncrypted.checked := RAR.archiveInfo.headerEncrypted;
+```
+
 Getting information about each file in a RAR archive:
 ```Delphi
 
-  TRARFileItem = record // defined in TRAR.pas
+  TRARFileItem = record // defined in RAR.pas
     fileName:             AnsiString;
     fileNameW:            WideString;
     splitFile:            boolean;
@@ -61,38 +116,47 @@ Getting information about each file in a RAR archive:
   ...
 
   procedure TIndexer.RARListFile(const aFileItem: TRARFileItem);
+  // fileName includes any path information in the RAR archive, e.g. folder1/file1.txt
+  // this full path for each file must also be passed to extractArchive() or addFile() when specifying which files to extract
   begin
-    memo1.lines.add(aFileItem.fileName);
+    memo1.lines.add(aFileItem.fileName); 
   end;
 
   ...
 
   RAR.listArchive(archivePath); // calls onListFile for each file in the RAR archive
- 
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 Extracting the entire RAR archive to a folder:
 ```Delphi
   RAR.extractArchive(archiveFile, extractPath); // TRAR will "forceDirectories()" the extraction path as necessary
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 Extracting an individual file from a RAR archive:
 ```Delphi
   RAR.extractArchive(archiveFile, extractPath, filePath); // filePath is the entire path to the file _inside_ the RAR archive, including any subfolders
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 Extracting a list of files from a RAR archive:
 ```Delphi
   RAR.clearFiles;
   RAR.prepareArchive(archiveFile); // reduces the internal overheads involved in repeated extractions
+
+  // RAR.archiveinformation.?  is also available now.
   
   for i := 0 to memo1.lines.count - 1 do
-    RAR.addFile(memo1.lines[i]);
+    RAR.addFile(memo1.lines[i]); // must be the full path to the file in the RAR archive, e.g. folder1/myfile.txt
 
   showMessage(format('Extracting %d files', [RAR.fileCount]));
     
   RAR.extractPreparedArchive(archiveFile, extractPath);
-  RAR.clearFiles; // good practice as this list takes precedence over specifyig an individual file with RAR.extractArchive(archiveFile, extractPath, filePath);
+  RAR.clearFiles; // good practice as this list takes precedence over specifying an individual file with RAR.extractArchive(archiveFile, extractPath, filePath);
 ```
 
 Providing a password:
@@ -103,6 +167,8 @@ Up-Front:
 ```Delphi
   RAR.password := 'this is the pw';
   RAR.testArchive(archivePath);
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 On Request:
@@ -142,7 +208,8 @@ Receiving feedback during RAR operations:
 
   RAR.onProgress := RARProgress; // must be procedure of object
   ...
-  // this gets called periodically during UnRAR.dll's processing, typically after each 4K chunk of data
+  // this gets called periodically during UnRAR.dll's processing, typically after each 4MB chunk of data (4,194,304 bytes)
+  // onProgress will be called once only for each file that is smaller than this.
   procedure TIndexer.RARProgress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
   begin
     // Sender is the TRAR object instance
@@ -169,7 +236,27 @@ On the rare occasion that they're in different locations, or the secondary parts
     end;
   end;
 ```
+
+Helper functions which don't require opening the RAR archive:
+
+```Delphi
+  var vIsMultiVol := RAR.isMultiVol(archivePath); // is the filename a .part1.rar, .part01.rar or .part001.rar ?
+```
+
+```Delphi
+  var vIsMultiVolPart := RAR.isMultiVolPart(archivePath); // is the filename .part2.rar, .part02.rar, .part002.rar or a later part?
+```
+
+```Delphi
+
+
+
+
+
   
+
+More on the way.  
+```
 
 
 
