@@ -18,4 +18,4 @@ My Extractor application (https://github.com/BazzaCuda/Extractor) contains a wra
 
 Of course, big thanks are due to Phillipe for his original 32-bit component, some 16 years ago!
 
-N.B. The code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll as appropriate; both are included for download in this project's releases.
+N.B. The code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll, as appropriate, so you can easily switch between compiling and running your application for either architecture; both are included for download in this project's releases.
