@@ -50,6 +50,43 @@ Testing a RAR archive:
 case RAR.testArchive(archivePath) of FALSE: showMessage('Test Failed!'); end;
 ```
 
+Getting information about the RAR archive:
+
+```Delphi
+
+  TRARArchiveInfo = record // defined in RAR.pas
+    fileName:             Ansistring;
+    fileNameW:            WideString;
+
+    volume:               boolean;
+    archiveComment:       boolean;
+    locked:               boolean;
+    solid:                boolean;
+    newNumbering:         boolean;
+    signed:               boolean;
+    recovery:             boolean;
+    headerEncrypted:      boolean;
+    firstVolume:          boolean;
+    SFX:                  boolean;
+    
+    packedSizeMVVolume:   cardinal;
+    archiverMajorVersion: cardinal;
+    archiverMinorVersion: cardinal;
+    hostOS:               string;
+    totalFiles:           integer;
+    dictionarySize:       int64;
+    compressedSize:       int64;
+    unCompressedSize:     int64;
+    multiVolume:          boolean;
+    fileComment:          boolean;
+  end;
+
+  ...
+
+  RAR.prepareArchive(archivePath); // use this to populate the TRARArchiveInfo record if you haven't yet performed a RAR operation
+  chbHeaderEncrypted.checked := RAR.archiveInfo.headerEncrypted;
+```
+
 Getting information about each file in a RAR archive:
 ```Delphi
 
@@ -185,43 +222,6 @@ On the rare occasion that they're in different locations, or the secondary parts
                                                       FALSE: oCancel      := TRUE; // no idea where it is
     end;
   end;
-```
-
-Getting information about the RAR archive:
-
-```Delphi
-
-  TRARArchiveInfo = record // defined in RAR.pas
-    fileName:             Ansistring;
-    fileNameW:            WideString;
-
-    volume:               boolean;
-    archiveComment:       boolean;
-    locked:               boolean;
-    solid:                boolean;
-    newNumbering:         boolean;
-    signed:               boolean;
-    recovery:             boolean;
-    headerEncrypted:      boolean;
-    firstVolume:          boolean;
-    SFX:                  boolean;
-    
-    packedSizeMVVolume:   cardinal;
-    archiverMajorVersion: cardinal;
-    archiverMinorVersion: cardinal;
-    hostOS:               string;
-    totalFiles:           integer;
-    dictionarySize:       int64;
-    compressedSize:       int64;
-    unCompressedSize:     int64;
-    multiVolume:          boolean;
-    fileComment:          boolean;
-  end;
-
-  ...
-
-  RAR.prepareArchive(archivePath); // use this to populate the TRARArchiveInfo record if you haven't yet performed a RAR operation
-  chbHeaderEncrypted.checked := RAR.archiveInfo.headerEncrypted;
 ```
 
 Helper functions which don't require opening the RAR archive:
