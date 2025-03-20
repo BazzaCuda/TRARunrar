@@ -156,7 +156,7 @@ Extracting a list of files from a RAR archive:
   showMessage(format('Extracting %d files', [RAR.fileCount]));
     
   RAR.extractPreparedArchive(archiveFile, extractPath);
-  RAR.clearFiles; // good practice as this list takes precedence over specifyig an individual file with RAR.extractArchive(archiveFile, extractPath, filePath);
+  RAR.clearFiles; // good practice as this list takes precedence over specifying an individual file with RAR.extractArchive(archiveFile, extractPath, filePath);
 ```
 
 Providing a password:
