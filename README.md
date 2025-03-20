@@ -70,3 +70,27 @@ Getting information about each file in a RAR archive:
   RAR.listArchive(archivePath); // calls onListFile for each file in the RAR archive
  
 ```
+
+Extracting the entire RAR archive to a folder:
+```Delphi
+  RAR.extractArchive(archiveFile, extractPath); // TRAR will "forceDirectories()" the extraction path as necessary
+```
+
+Extracting an individual file from a RAR archive:
+```Delphi
+  RAR.extractArchive(archiveFile, extractPath, filePath); // filePath must match the entire path to the file in the RAR archive, including subfolders
+```
+
+Extracting a list of files from a RAR archive:
+```Delphi
+  RAR.clearFiles;
+  RAR.prepareArchive(archiveFile);
+  
+  for i := 0 to memo1.lines.count - 1 do
+    RAR.addFile(memo1.linesi[]);
+
+  showMessage(format('Extracting %d files', [RAR.fileCount]));
+    
+  RAR.extractPreparedArchive(archiveFile, extractPath);
+  RAR.clearFiles; // good practice as this list takes precedence over specifyig an individual file with RAR.extractArchive(archiveFile, extractPath, filePath);
+```
