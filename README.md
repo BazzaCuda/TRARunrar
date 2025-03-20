@@ -160,7 +160,7 @@ On the rare occasion that they're in different locations, or the secondary parts
 ```Delphi
   RAR.onNextVolRequired := RARNextVolRequired; // must be procedure of object;
   ...
-  procedure RARNextVolRequired(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean);
+  procedure TIndexer.RARNextVolRequired(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean);
   begin
     // Sender is the TRAR object instance
     case aRequiredFileName = 'myarchive.part6.rar' of  TRUE: oNewFileName := 'C:\Windows\System32\Whats_It_Doing_Here.part006.rar';
