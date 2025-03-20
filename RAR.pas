@@ -85,7 +85,7 @@ type
   TRAROnPasswordRequired    = procedure(Sender: TObject; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
   TRAROnNextVolumeRequired  = procedure(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean) of object;
   TRAROnProgress            = procedure(Sender: TObject; const aProgressInfo: TRARProgressInfo) of object;
-  TRAROnReplace             = procedure(Sender: TObject; const aExistingData:TRARReplaceData; aNewData:TRARReplaceData; out oAction: TRARReplace) of object;
+  TRAROnReplace             = procedure(Sender: TObject; const aExistingData: TRARReplaceData; aNewData: TRARReplaceData; out oAction: TRARReplace) of object;
 
   TRARArchiveInfo = record
     fileName:             Ansistring;
@@ -361,7 +361,7 @@ begin
     end;
 
   except
-    MessageBox(0, 'It go Bang!', 'Bang!', MB_ICONEXCLAMATION or MB_OK);
+    MessageBox(0, 'TRAR exception in unRarCallBack', 'TRAR', MB_ICONEXCLAMATION or MB_OK);
   end;
 end;
 
@@ -713,7 +713,6 @@ begin
     closeArchive(aRAR.handle);
   end;
 end;
-
 
 function extractPreparedRARArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
                                          aOnRARProgress:       TRAROnProgress            = NIL;
