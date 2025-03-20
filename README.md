@@ -83,7 +83,9 @@ Getting information about the RAR archive:
 
   ...
 
-  RAR.prepareArchive(archivePath); // use this to populate the TRARArchiveInfo record if you haven't yet performed a RAR operation
+// use prepareArchive to populate the TRARArchiveInfo record if you haven't yet performed one
+// of the other RAR operations such as testArchive, listArchive, extractArchive
+  RAR.prepareArchive(archivePath);
   chbHeaderEncrypted.checked := RAR.archiveInfo.headerEncrypted;
 ```
 
@@ -114,33 +116,42 @@ Getting information about each file in a RAR archive:
   ...
 
   procedure TIndexer.RARListFile(const aFileItem: TRARFileItem);
+  // fileName includes any path information in the RAR archive, e.g. folder1/file1.txt
+  // this full path for each file must also be passed to extractArchive() or addFile() when specifying which files to extract
   begin
-    memo1.lines.add(aFileItem.fileName);
+    memo1.lines.add(aFileItem.fileName); 
   end;
 
   ...
 
   RAR.listArchive(archivePath); // calls onListFile for each file in the RAR archive
- 
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 Extracting the entire RAR archive to a folder:
 ```Delphi
   RAR.extractArchive(archiveFile, extractPath); // TRAR will "forceDirectories()" the extraction path as necessary
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 Extracting an individual file from a RAR archive:
 ```Delphi
   RAR.extractArchive(archiveFile, extractPath, filePath); // filePath is the entire path to the file _inside_ the RAR archive, including any subfolders
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 Extracting a list of files from a RAR archive:
 ```Delphi
   RAR.clearFiles;
   RAR.prepareArchive(archiveFile); // reduces the internal overheads involved in repeated extractions
+
+  // RAR.archiveinformation.?  is also available now.
   
   for i := 0 to memo1.lines.count - 1 do
-    RAR.addFile(memo1.lines[i]);
+    RAR.addFile(memo1.lines[i]); // must be the full path to the file in the RAR archive, e.g. folder1/myfile.txt
 
   showMessage(format('Extracting %d files', [RAR.fileCount]));
     
@@ -156,6 +167,8 @@ Up-Front:
 ```Delphi
   RAR.password := 'this is the pw';
   RAR.testArchive(archivePath);
+
+  // RAR.archiveinformation.?  is also available now.
 ```
 
 On Request:
