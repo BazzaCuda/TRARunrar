@@ -584,7 +584,7 @@ begin
   aRAR.progressInfo := default(TRARProgressInfo);
 
   {$IF BazDebugWindow}
-  debug('extractArchiveFiles: aFolderPath = ' + aFolderPath);
+  debug('extractArchiveFiles: aExtractPath = ' + aExtractPath);
   debug('extractArchiveFiles: aFileName   = ' + aFileName);
   {$ENDIF}
 
@@ -690,7 +690,7 @@ begin
 end;
 
 
-function extractPreparedRARArchive(const aArchivePath: string; const aFolderPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
+function extractPreparedRARArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string; const aFiles: TStringList; aRAR: TRARArchive;
                                          aOnRARProgress:       TRAROnProgress            = NIL;
                                          aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
                                          aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
@@ -702,16 +702,16 @@ begin
     initCallBack(aRAR, aOnRARProgress, aOnPasswordRequired, aOnNextVolRequired);
     try
       case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
-      result := extractArchiveFiles(aFolderPath, aFileName, aFiles, aRAR); // perform the extract operation
+      result := extractArchiveFiles(aExtractPath, aFileName, aFiles, aRAR); // perform the extract operation
     finally
       closeArchive(aRAR.handle);
     end;
   end;
 end;
 
-function prepareRARArchive(const aArchivePath: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
-                                                                        aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
-                                                                        aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
+function prepareRARArchive(const aArchivePath: string; aRAR: TRARArchive; aOnRARProgress:       TRAROnProgress            = NIL;
+                                                                          aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
+                                                                          aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 // setup the extract operation
 begin
   begin
@@ -755,9 +755,9 @@ begin
   end;
 end;
 
-function testRARArchive(const aArchivePath: string; aRAR: TRARArchive; aOnRARProgress:       TRAROnProgress            = NIL;
-                                                                    aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
-                                                                    aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
+function testRARArchive(const aArchivePath: string; aRAR: TRARArchive;  aOnRARProgress:       TRAROnProgress            = NIL;
+                                                                        aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
+                                                                        aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): boolean;
 // setup the test operation
 begin
   begin
