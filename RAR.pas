@@ -81,7 +81,7 @@ type
   end;
 
   TRAROnErrorNotifyEvent    = procedure(Sender: TObject; const aErrorCode: integer; const aOperation: TRAROperation) of object;
-  TRAROnListFile            = procedure(Sender: TObject; const aFileInformation: TRARFileItem) of object;
+  TRAROnListFile            = procedure(Sender: TObject; const aFileItem: TRARFileItem) of object;
   TRAROnPasswordRequired    = procedure(Sender: TObject; const aFileName: Ansistring; out oNewPassword: Ansistring; out oCancel: boolean) of object;
   TRAROnNextVolumeRequired  = procedure(Sender: TObject; const aRequiredFileName: Ansistring; out oNewFileName: Ansistring; out oCancel: boolean) of object;
   TRAROnProgress            = procedure(Sender: TObject; const aProgressInfo: TRARProgressInfo) of object;
