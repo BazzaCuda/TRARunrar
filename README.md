@@ -26,7 +26,7 @@ Example usage:
 
 ```Delphi
 uses
-  RAR, RAR_DLL;
+  RAR;
 
 type
   TUI = class(TForm)
