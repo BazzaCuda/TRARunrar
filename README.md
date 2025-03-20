@@ -145,6 +145,7 @@ Receiving feedback during RAR operations:
   // this gets called periodically during UnRAR.dll's processing, typically after each 4K chunk of data
   procedure TIndexer.RARProgress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
   begin
+    // Sender is the RAR object instance
     // N.B. excessive updating of labels and progressBars can have a detrimental effect on operational speed 
   end;
 ```
