@@ -40,6 +40,8 @@ uses
   windows, sysUtils;
 
 const
+  customDLL            = FALSE;
+
   RAR_METHOD_STORE      = 48;
   RAR_METHOD_FASTEST    = 49;
   RAR_METHOD_FAST       = 50;
@@ -237,6 +239,11 @@ var
   RARSetPassword:         procedure (hArcData: THandle; Password:         PAnsiChar);                                             {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
   RARGetDllVersion:       function:                                                                                     integer;  {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
 
+{$IF customDLL}
+  RARSetPasswordW:        procedure (hArcData: THandle; Password:         PWideChar);                                             {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
+{$ENDIF}
+
+
 function getFileModifiedDate(const aFilePath: string): TDateTime;
 function getFileSize(const s: string): int64;
 function isSFX(const fileName:String): boolean;
@@ -352,23 +359,28 @@ begin
 
   case result = RAR_INVALID_HANDLE of TRUE: EXIT; end;
 
-  @RAROpenArchive         := GetProcAddress(result, 'RAROpenArchive');
-  @RAROpenArchiveEx       := GetProcAddress(result, 'RAROpenArchiveEx');
-  @RARCloseArchive        := GetProcAddress(result, 'RARCloseArchive');
-  @RARReadHeader          := GetProcAddress(result, 'RARReadHeader');
-  @RARReadHeaderEx        := GetProcAddress(result, 'RARReadHeaderEx');
-  @RARProcessFile         := GetProcAddress(result, 'RARProcessFile');
-  @RARProcessFileW        := GetProcAddress(result, 'RARProcessFileW');
-  @RARSetCallback         := GetProcAddress(result, 'RARSetCallback');
-  @RARSetChangeVolProc    := GetProcAddress(result, 'RARSetChangeVolProc');
-  @RARSetProcessDataProc  := GetProcAddress(result, 'RARSetProcessDataProc');
-  @RARSetPassword         := GetProcAddress(result, 'RARSetPassword');
-  @RARGetDllVersion       := GetProcAddress(result, 'RARGetDllVersion');
+  @RAROpenArchive         := getProcAddress(result, 'RAROpenArchive');
+  @RAROpenArchiveEx       := getProcAddress(result, 'RAROpenArchiveEx');
+  @RARCloseArchive        := getProcAddress(result, 'RARCloseArchive');
+  @RARReadHeader          := getProcAddress(result, 'RARReadHeader');
+  @RARReadHeaderEx        := getProcAddress(result, 'RARReadHeaderEx');
+  @RARProcessFile         := getProcAddress(result, 'RARProcessFile');
+  @RARProcessFileW        := getProcAddress(result, 'RARProcessFileW');
+  @RARSetCallback         := getProcAddress(result, 'RARSetCallback');
+  @RARSetChangeVolProc    := getProcAddress(result, 'RARSetChangeVolProc');
+  @RARSetProcessDataProc  := getProcAddress(result, 'RARSetProcessDataProc');
+  @RARSetPassword         := getProcAddress(result, 'RARSetPassword');
+  @RARGetDllVersion       := getProcAddress(result, 'RARGetDllVersion');
+
+  {$IF customDLL}
+  @RARSetPasswordW        := GetProcAddress(result, 'RARSetPasswordW');
+  {$ENDIF}
+
 
   if (@RAROpenArchive = NIL) or (@RAROpenArchiveEx    = NIL) or (@RARCloseArchive = NIL)
   or (@RARReadHeader  = NIL) or (@RARReadHeaderEx     = NIL) or (@RARProcessFile = NIL) or (@RARProcessFileW = NIL)
   or (@RARSetCallback = NIL) or (@RARSetChangeVolProc = NIL) or (@RARSetProcessDataProc = NIL)
-  or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL)
+  or (@RARSetPassword = NIL) or (@RARGetDllVersion    = NIL) {$IF customDLL} or (@RARSetPasswordW = NIL) {$ENDIF}
   then unloadDLL
   else if RARGetDllVersion < RAR_MIN_VERSION then messageBox(0, 'please download the latest "unrar.dll" file. See www.rarlab.com', 'Error', MB_ICONSTOP or MB_OK);
 end;

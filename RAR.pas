@@ -1,4 +1,4 @@
-//  originally written by Philippe Wechsler in 2008
+﻿//  originally written by Philippe Wechsler in 2008
 //  completely re-written by Baz Cuda in 2025
 //
 //  web: www.PhilippeWechsler.ch
@@ -19,7 +19,7 @@
 //   - support for delphi 2009
 //   - support for unicode filenames (see TRARFileItem.FileNameW)
 //   - dll name + path is custom
-//   - fixed a memory leak (thanks to Claes Ensk�r)
+//   - fixed a memory leak (thanks to Claes Enskär)
 //   - some small improvements in the demo
 //  changes in 1.1 stable
 //   - fixed problem with mySelf pointer - you can use now multiple TRAR instances
@@ -111,7 +111,7 @@ type
     totalFiles:           integer; // incremented when processing each file header
     dictionarySize:       int64;
     compressedSize:       int64;   // totalled from aHeaderDataEx.PackSize when processing each file header
-    unCompressedSize:     int64;   // totalled from aHeaderDataEx.UnpSize  when processing eacah file header
+    unCompressedSize:     int64;   // totalled from aHeaderDataEx.UnpSize  when processing each file header
     multiVolume:          boolean;
     fileComment:          boolean;
   end;
@@ -240,10 +240,13 @@ type
     function  fileCount: integer;
 
     function  extractArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string = ''):  boolean;
-    function  extractPreparedArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string): boolean;
-    function  listArchive(const aArchivePath:string):      boolean;
-    function  prepareArchive(const aArchivePath: string):  boolean;
-    function  testArchive(const aArchivePath:string):      boolean;
+    function  extractPreparedArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string = ''): boolean;
+    function  listArchive(const aArchivePath:string):       boolean;
+    function  prepareArchive(const aArchivePath: string):   boolean;
+    function  testArchive(const aArchivePath: string):      boolean;
+
+    function  isMultiVol(const aArchivePath: string):       boolean;
+    function  isMultiVolPart(const aArchivePath: string):   boolean;
 
     property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
     property DLLName:               string                    read getDLLName;
@@ -276,8 +279,9 @@ type
 
 implementation
 
-//uses
-//  _debugWindow; // un-commenting this will activate sending debug messages to BazDebugWindow if you have it installed (https://github.com/BazzaCuda/BazDebugWindow)
+uses
+//  _debugWindow, // un-commenting this will activate sending debug messages to BazDebugWindow if you have it installed (https://github.com/BazzaCuda/BazDebugWindow)
+  system.ioUtils;
 
 const
   gVersion = '2.0';
@@ -309,8 +313,8 @@ var
   vCancel:    boolean;
   vFileName:  AnsiString;
   vPassword:  AnsiString;
-  vData:      TBytes;
-  vDataString: string;
+//  vData:      TBytes;
+//  vDataString: string;
 begin
   vCancel := FALSE;
   result  := RAR_CONTINUE;
@@ -382,6 +386,21 @@ begin
   end;
 end;
 
+function processDataCallBack(addr: PByte; size: integer): integer;
+//var
+//  vData:        TBytes;
+//  vDataString:  string;
+begin
+//  debugInteger('data size', size);
+//  setLength(vData, size);
+//  move(pointer(addr)^, vData[0], size);
+//  setString(vDataString, PAnsiChar(@vData[0]), size);
+//  debugString('vDataString', vDataString);
+//  memoryStream.write(addr^, size);
+//  result := 0; // 0 = cancel. Anything else continues (rdwrfn.cpp)
+end;
+
+
 function initCallBack(const aRAR: TRARArchive;  aOnProgress:          TRAROnProgress            = NIL;
                                                 aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
                                                 aOnNextVolRequired:   TRAROnNextVolumeRequired  = NIL): ICallBackInfo;
@@ -392,6 +411,7 @@ begin
   result.onProgress         := aOnProgress;
   result.onPasswordRequired := aOnPasswordRequired;
   RARSetCallback(aRAR.handle, unRarCallBack, LPARAM(result));
+//  RARSetProcessDataProc(aRAR.handle, processDataCallBack);
 end;
 
 function processFileHeader(const aFileHeaderDataEx: TRARHeaderDataEx; const aRAR: TRARArchive): TRARHeaderType; // populate FArchiveInfo: TRARArchiveInfo and vFileItem: TRARFileItem from aHeaderDataEx
@@ -628,7 +648,7 @@ begin
     initCallBack(aRAR, NIL, aOnPasswordRequired, aOnNextVolRequired);
     try
       case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
-      result := listArchiveFiles(aRAR, FALSE); // get archive total unCompressedSize for the progress callback below
+      result := listArchiveFiles(aRAR, FALSE); // get archive total unCompressedSize for the progress callback below (reqd for multi-volume archives)
     finally
       closeArchive(aRAR.handle);
     end;
@@ -672,9 +692,9 @@ begin
   end;
 end;
 
-function listRARFiles(const aArchivePath: string; aRAR: TRARArchive;   aOnListFile:         TRAROnListFile           = NIL;
-                                                                    aOnPasswordRequired: TRAROnPasswordRequired   = NIL;
-                                                                    aOnNextVolRequired:  TRAROnNextVolumeRequired = NIL): boolean;
+function listRARFiles(const aArchivePath: string; aRAR: TRARArchive;  aOnListFile:         TRAROnListFile           = NIL;
+                                                                      aOnPasswordRequired: TRAROnPasswordRequired   = NIL;
+                                                                      aOnNextVolRequired:  TRAROnNextVolumeRequired = NIL): boolean;
 // setup the list operation
 begin
   result := openArchive(aArchivePath, getOpenMode(aRAR.readMVToEnd), aRAR, TRUE);
@@ -682,7 +702,12 @@ begin
 
   initCallBack(aRAR, NIL, aOnPasswordRequired, aOnNextVolRequired);
   try
+    {$IF NOT customDLL}
     case aRAR.password = '' of FALSE: RARSetPassword(aRAR.handle, PAnsiChar(aRAR.password)); end;
+    {$ELSE}
+      var vPW: WideString := '你好世界123!';
+      RARSetPasswordW(aRAR.handle, '你好世界123!');
+    {$ENDIF}
     result := listArchiveFiles(aRAR, TRUE, aOnListFile); // call the list operation
   finally
     closeArchive(aRAR.handle);
@@ -848,7 +873,7 @@ begin
   result := extractRARArchive(aArchivePath, vExtractPath, aFileName, FFiles, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
 end;
 
-function TRAR.extractPreparedArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string): boolean;
+function TRAR.extractPreparedArchive(const aArchivePath: string; const aExtractPath: string; const aFileName: string = ''): boolean;
 begin
   var vExtractPath := aExtractPath;
   case (length(vExtractPath) > 0) and (vExtractPath[length(vExtractPath)] <> '\') of TRUE: vExtractPath := vExtractPath + '\'; end;
@@ -939,6 +964,20 @@ end;
 function TRAR.getVersion: string;
 begin
   result := gVersion;
+end;
+
+function TRAR.isMultiVol(const aArchivePath: string): boolean;
+begin
+  var vFile := TPath.getFileNameWithoutExtension(aArchivePath); // strip off the .rar extension
+  var vExt  := lowerCase(extractFileExt(vFile));                // isolate the [potential] .partn, .partnn or .partnnn part
+  result := (vExt = '.part1') or (vExt = '.part01') or (vExt = '.part001');
+end;
+
+function TRAR.isMultiVolPart(const aArchivePath: string): boolean;
+begin
+  var vFile := TPath.getFileNameWithoutExtension(aArchivePath); // strip off the .rar extension
+  var vExt  := lowerCase(extractFileExt(vFile));                // isolate the [potential] .partn, .partnn or .partnnn part
+  result := (pos('.part', vExt) = 1) and (vExt <> '.part1') and (vExt <> '.part01') and (vExt <> '.part001'); // it's a subordinate part
 end;
 
 { TRARArchive }
