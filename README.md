@@ -78,16 +78,16 @@ Extracting the entire RAR archive to a folder:
 
 Extracting an individual file from a RAR archive:
 ```Delphi
-  RAR.extractArchive(archiveFile, extractPath, filePath); // filePath must match the entire path to the file in the RAR archive, including subfolders
+  RAR.extractArchive(archiveFile, extractPath, filePath); // filePath is the entire path to the file _inside_ the RAR archive, including any subfolders
 ```
 
 Extracting a list of files from a RAR archive:
 ```Delphi
   RAR.clearFiles;
-  RAR.prepareArchive(archiveFile);
+  RAR.prepareArchive(archiveFile); // reduces the internal overheads involved in repeated extractions
   
   for i := 0 to memo1.lines.count - 1 do
-    RAR.addFile(memo1.linesi[]);
+    RAR.addFile(memo1.lines[i]);
 
   showMessage(format('Extracting %d files', [RAR.fileCount]));
     
