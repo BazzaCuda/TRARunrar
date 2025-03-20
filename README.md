@@ -186,7 +186,64 @@ On the rare occasion that they're in different locations, or the secondary parts
     end;
   end;
 ```
+
+Getting information about the RAR archive:
+
+```Delphi
+
+  TRARArchiveInfo = record // defined in RAR.pas
+    fileName:             Ansistring;
+    fileNameW:            WideString;
+
+    volume:               boolean;
+    archiveComment:       boolean;
+    locked:               boolean;
+    solid:                boolean;
+    newNumbering:         boolean;
+    signed:               boolean;
+    recovery:             boolean;
+    headerEncrypted:      boolean;
+    firstVolume:          boolean;
+    SFX:                  boolean;
+    
+    packedSizeMVVolume:   cardinal;
+    archiverMajorVersion: cardinal;
+    archiverMinorVersion: cardinal;
+    hostOS:               string;
+    totalFiles:           integer;
+    dictionarySize:       int64;
+    compressedSize:       int64;
+    unCompressedSize:     int64;
+    multiVolume:          boolean;
+    fileComment:          boolean;
+  end;
+
+  ...
+
+  RAR.prepareArchive(archivePath); // use this to populate the TRARArchiveInfo record if you haven't yet performed a RAR operation
+  chbHeaderEncrypted.checked := RAR.archiveInfo.headerEncrypted;
+```
+
+Helper functions which don't require opening the RAR archive:
+
+```Delphi
+  var vIsMultiVol := RAR.isMultiVol(archivePath); // is the filename a .part1.rar, .part01.rar or .part001.rar ?
+```
+
+```Delphi
+  var vIsMultiVolPart := RAR.isMultiVolPart(archivePath); // is the filename .part2.rar, .part02.rar, .part002.rar or a later part?
+```
+
+```Delphi
+
+
+
+
+
   
+
+More on the way.  
+```
 
 
 
