@@ -37,7 +37,7 @@ case RAR.testArchive(archivePath) of FALSE: showMessage('Test Failed!'); end;
 Getting information about each file in a RAR archive:
 ```Delphi
 
-  TRARFileItem = record // defined in TRAR.pas
+  TRARFileItem = record // defined in RAR.pas
     fileName:             AnsiString;
     fileNameW:            WideString;
     splitFile:            boolean;
