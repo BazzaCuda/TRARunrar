@@ -22,6 +22,18 @@ Of course, big thanks are due to Phillipe for his original 32-bit component, som
 _N.B. If you download the DLL from rarlab.com, the code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll, as appropriate, so that you can easily switch between compiling and running your application for either architecture; both DLLs are included for download in this project's releases._
 
 -----------
+### Update History
+v2.1 (2025-03-21)
+
+Correction to TRAROpenArchiveDataEx in line with unrar's C struct which was preventing any archive comment from being read.
+
+Some header flags are not available when the RAR archive's header is encrypted - the comments in TRAR.processOpenArchive now reflect this.
+
+Added findFiles, general-purpose file-finding function which defaults to finding .rar archives. see usage below.
+
+Created a separate registerTRAR.pas unit for compiling the package project and for installing/updating the component. Having the registration code in RAR.pas was preventing 32-bit applications from being compiled as they had no access to DesignEditors and DesignIntf.
+
+-----------
 
 Example usage:
 
@@ -257,7 +269,9 @@ function TRAR.findFiles(const aFolderPath: string; bSubFolders: boolean = TRUE; 
   var vFileCount := RAR.findFiles('C:\MyFiles\'); // defaults to recursing into sub-folders and finding files with .rar extension
   memo1.lines.assign(RAR.foundFiles);
 ```
-Although it defaults to finding '.rar' files, findFiles is a general-purpose file finder:
+Although it defaults to finding '.rar' files, findFiles is a general-purpose file finder.
+It will, however, always ignore multi-part volumes from part2/part02/part002 onwards.
+It will also currently ignore system files and folders, and hidden files and folders.
 ```Delphi
   RAR.foundFiles.clear;
   RAR.findFiles('C:\MyFiles', TRUE, '.txt.doc.rar.zip.dat');
@@ -268,6 +282,18 @@ Although it defaults to finding '.rar' files, findFiles is a general-purpose fil
   for var i := 0 to RAR.foundFiles.count - 1 do
     showMessage('Found another one: ' + RAR.foundFiles[i];
 ```
+
+Get the DLL's file name:
+```Delphi
+  var vDLLName := RAR.DLLName; // will be unrar32.dll or unrar64.dll
+```
+Get the DLL's version number:
+```Delphi
+  var vDLLVersion: integer := RAR.DLLVersion;
+// Currently v9, a constant defined in unrar.dll
+// N.B. This is not the build version, which is currently v7.11.1.1525
+```
+
 
 
 
