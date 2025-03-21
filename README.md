@@ -269,7 +269,9 @@ function TRAR.findFiles(const aFolderPath: string; bSubFolders: boolean = TRUE; 
   var vFileCount := RAR.findFiles('C:\MyFiles\'); // defaults to recursing into sub-folders and finding files with .rar extension
   memo1.lines.assign(RAR.foundFiles);
 ```
-Although it defaults to finding '.rar' files, findFiles is a general-purpose file finder:
+Although it defaults to finding '.rar' files, findFiles is a general-purpose file finder.
+It will, however, always ignore multi-part volumes from part2/part02/part002 onwards.
+It will also currently ignore system files and folders, and hidden files and folders.
 ```Delphi
   RAR.foundFiles.clear;
   RAR.findFiles('C:\MyFiles', TRUE, '.txt.doc.rar.zip.dat');
