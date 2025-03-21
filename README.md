@@ -1,10 +1,11 @@
+![winrarbanner03](https://github.com/user-attachments/assets/bcc92146-c58f-49b2-bfb0-9e0c1c9866ed)
 # TRAR
- 
+
 This complete re-envisioning, re-architecting and re-writing of Phillipe Wechsler's 2008/2009 Delphi component now supports both the 32-bit and 64-bit versions of unrar.dll from rarlab.com
 
 listArchive, testArchive and extractArchive tested and working against the latest versions of unrar.dll (v7.11.1.1525 - 2025/03/19), including multi-volume RAR archives.
 
-Full documentation to follow: see below for usage examples.
+See below for usage examples.
 
 TRAR as a Delphi IDE component has now been added. 
 TRAR works just as well when used as standalone, included (i.e. "uses") units in a Delphi project, which is how I use it in my own projects. 
