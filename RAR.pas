@@ -905,7 +905,7 @@ begin
     repeat
       case ((SR.attr AND faDirectory) = faDirectory) of
          TRUE: case (SR.name <> '.') and (SR.name <> '..') of TRUE: findFiles(vFolderPath + SR.name, bSubFolders, aFileExts); end;
-        FALSE: case extOK and NOT isMultiVolPart(vFolderPath + SR.name) of TRUE: FFoundFiles.add(vFolderPath + SR.name); end;end;
+        FALSE: case extOK and NOT isMultiVolPart(SR.name) of TRUE: FFoundFiles.add(vFolderPath + SR.name); end;end;
     until findNext(SR) <> 0; end;
 
   sysUtils.findClose(SR);
@@ -995,6 +995,7 @@ begin
 end;
 
 function TRAR.isMultiVol(const aArchivePath: string): boolean;
+// It's the first part of a multi-volume set
 begin
   var vFile := TPath.getFileNameWithoutExtension(aArchivePath); // strip off the .rar extension
   var vExt  := lowerCase(extractFileExt(vFile));                // isolate the [potential] .partn, .partnn or .partnnn part
@@ -1002,6 +1003,7 @@ begin
 end;
 
 function TRAR.isMultiVolPart(const aArchivePath: string): boolean;
+// It's a continuation of a multi-volume set but not the first part
 begin
   var vFile := TPath.getFileNameWithoutExtension(aArchivePath); // strip off the .rar extension
   var vExt  := lowerCase(extractFileExt(vFile));                // isolate the [potential] .partn, .partnn or .partnnn part

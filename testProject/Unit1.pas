@@ -60,6 +60,7 @@ end;
 procedure TForm1.btnFindFilesClick(Sender: TObject);
 begin
   memo1.lines.clear;
+  RAR1.foundFiles.clear;
   RAR1.findFiles('..\..', TRUE);
   RAR1.foundFiles.sorted := TRUE;
   memo1.lines.assign(RAR1.foundFiles);
