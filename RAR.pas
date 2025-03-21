@@ -920,7 +920,7 @@ var
   function extOK: boolean;
   begin
     var vExt  := lowerCase(extractFileExt(SR.name));
-    result    := pos(vExt, aFileExts) > 0;
+    result    := (aFileExts = '') or (pos(vExt, aFileExts) > 0);
   end;
 
 begin
