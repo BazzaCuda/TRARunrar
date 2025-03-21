@@ -249,6 +249,32 @@ Helper functions which don't require opening the RAR archive:
 ```
 
 ```Delphi
+function TRAR.findFiles(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
+// populates an internal TStringList to which you have full access via RAR.foundFiles
+// returns the number of files in the list
+// doesn't clear the list - that is left to the caller.
+...
+  var vFileCount := RAR.findFiles('C:\MyFiles\'); // defaults to recursing into sub-folders and finding files with .rar extension
+  memo1.lines.assign(RAR.foundFiles);
+```
+Although it defaults to finding '.rar' files, findFiles is a general-purpose file finder:
+```Delphi
+  RAR.foundFiles.clear;
+  RAR.findFiles('C:\MyFiles', TRUE, '.txt.doc.rar.zip.dat');
+...
+  RAR.findFiles('C:\MyFiles\', FALSE, ''); // empty extension list finds all files
+...
+  RAR.foundFiles.sorted := TRUE; 
+  for var i := 0 to RAR.foundFiles.count - 1 do
+    showMessage('Found another one: ' + RAR.foundFiles[i];
+```
+
+
+
+  
+  
+
+```Delphi
 
 
 
