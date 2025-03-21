@@ -237,8 +237,8 @@ On the rare occasion that they're in different locations, or the secondary parts
     end;
   end;
 ```
-
-Helper functions which don't require opening the RAR archive:
+---------
+### Helper functions which don't require opening the RAR archive:
 
 ```Delphi
   var vIsMultiVol := RAR.isMultiVol(archivePath); // is the filename a .part1.rar, .part01.rar or .part001.rar ?
@@ -262,7 +262,7 @@ Although it defaults to finding '.rar' files, findFiles is a general-purpose fil
   RAR.foundFiles.clear;
   RAR.findFiles('C:\MyFiles', TRUE, '.txt.doc.rar.zip.dat');
 ...
-  RAR.findFiles('C:\MyFiles\', FALSE, ''); // empty extension list finds all files
+  RAR.findFiles('C:\MyOtherFiles\', FALSE, ''); // empty extension list finds all files
 ...
   RAR.foundFiles.sorted := TRUE; 
   for var i := 0 to RAR.foundFiles.count - 1 do
