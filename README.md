@@ -262,7 +262,7 @@ Although it defaults to finding '.rar' files, findFiles is a general-purpose fil
   RAR.foundFiles.clear;
   RAR.findFiles('C:\MyFiles', TRUE, '.txt.doc.rar.zip.dat');
 ...
-  RAR.findFiles('C:\MyFiles\', FALSE, ''); // empty extension list finds all files
+  RAR.findFiles('C:\MyOtherFiles\', FALSE, ''); // empty extension list finds all files
 ...
   RAR.foundFiles.sorted := TRUE; 
   for var i := 0 to RAR.foundFiles.count - 1 do
