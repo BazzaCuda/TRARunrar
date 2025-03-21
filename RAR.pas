@@ -212,7 +212,7 @@ type
     FOnReplace:             TRAROnReplace;
 
     FFiles:                 TStringList;
-    FArchives:              TStringList;
+    FFoundFiles:            TStringList;
 
     function  getOnError:   TRAROnErrorNotifyEvent;
     procedure setOnError(const Value: TRAROnErrorNotifyEvent);
@@ -249,14 +249,14 @@ type
     function  prepareArchive(const aArchivePath: string):   boolean;
     function  testArchive(const aArchivePath: string):      boolean;
 
-    function  findArchives(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
+    function  findFiles(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
     function  isMultiVol(const aArchivePath: string):       boolean;
     function  isMultiVolPart(const aArchivePath: string):   boolean;
 
-    property archives:              TStringList               read FArchives;
     property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
     property DLLName:               string                    read getDLLName;
     property DLLVersion:            integer                   read getDLLVersion;
+    property foundFiles:            TStringList               read FFoundFiles;
     property lastResult:            integer                   read getLastResult;
     //pro: report correct archive compressed size and list all files in all parts
     //con: "all volumes required" means that to open, you have to insert all disks if not all volumes are in the same folder
@@ -862,16 +862,16 @@ begin
   FFiles.duplicates     := dupIgnore;
   FFiles.caseSensitive  := FALSE;
 
-  FArchives             := TStringList.create;
+  FFoundFiles           := TStringList.create;
 
   FOnProgress           := onRARProgressTest;
 end;
 
 destructor TRAR.Destroy;
 begin
-  case assigned(FRAR)       of TRUE: FRAR.free; end;
-  case assigned(FFiles)     of TRUE: FFiles.free; end;
-  case assigned(FArchives)  of TRUE: FArchives.free; end;
+  case assigned(FRAR)         of TRUE: FRAR.free; end;
+  case assigned(FFiles)       of TRUE: FFiles.free; end;
+  case assigned(FFoundFiles)  of TRUE: FFoundFiles.free; end;
   inherited destroy;
 end;
 
@@ -912,7 +912,7 @@ begin
   result := FFiles.count;
 end;
 
-function TRAR.findArchives(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
+function TRAR.findFiles(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
 var
   SR:           TSearchRec;
   RC:           integer;
@@ -932,12 +932,12 @@ begin
   case findFirst(vFolderPath + '*.*', vAttr, SR) = 0 of TRUE:
     repeat
       case ((SR.attr AND faDirectory) = faDirectory) of
-         TRUE: case (SR.name <> '.') and (SR.name <> '..') of TRUE: findArchives(vFolderPath + SR.name, bSubFolders, aFileExts); end;
-        FALSE: case extOK and NOT isMultiVolPart(vFolderPath + SR.name) of TRUE: FArchives.add(vFolderPath + SR.name); end;end;
+         TRUE: case (SR.name <> '.') and (SR.name <> '..') of TRUE: findFiles(vFolderPath + SR.name, bSubFolders, aFileExts); end;
+        FALSE: case extOK and NOT isMultiVolPart(vFolderPath + SR.name) of TRUE: FFoundFiles.add(vFolderPath + SR.name); end;end;
     until findNext(SR) <> 0; end;
 
   sysUtils.findClose(SR);
-  result := FArchives.count;
+  result := FFoundFiles.count;
 end;
 
 function TRAR.listArchive(const aArchivePath: string): boolean;

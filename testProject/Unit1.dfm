@@ -164,14 +164,14 @@ object Form1: TForm1
     TabOrder = 5
     Text = ''
   end
-  object btnFindArchives: TButton
+  object btnFindFiles: TButton
     Left = 64
     Top = 101
     Width = 83
     Height = 25
-    Caption = 'Find Archives'
+    Caption = 'Find Files'
     TabOrder = 6
-    OnClick = btnFindArchivesClick
+    OnClick = btnFindFilesClick
   end
   object RAR1: TRAR
     onError = RAR1Error

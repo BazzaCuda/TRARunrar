@@ -22,7 +22,7 @@ type
     edtPassword: TLabeledEdit;
     Label4: TLabel;
     Label5: TLabel;
-    btnFindArchives: TButton;
+    btnFindFiles: TButton;
     lblLastError: TLabel;
     procedure RAR1ListFile(Sender: TObject; const aFileInformation: TRARFileItem);
     procedure RAR1Error(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
@@ -31,7 +31,7 @@ type
     procedure RAR1Progress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
     procedure btnListFilesClick(Sender: TObject);
     procedure btnExtractClick(Sender: TObject);
-    procedure btnFindArchivesClick(Sender: TObject);
+    procedure btnFindFilesClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -57,11 +57,11 @@ begin
   lblLastError.caption := format('Last result code: %d', [RAR1.lastResult]);
 end;
 
-procedure TForm1.btnFindArchivesClick(Sender: TObject);
+procedure TForm1.btnFindFilesClick(Sender: TObject);
 begin
   memo1.lines.clear;
-  RAR1.findArchives('..\..', TRUE);
-  memo1.lines.assign(RAR1.archives);
+  RAR1.findFiles('..\..', TRUE);
+  memo1.lines.assign(RAR1.foundFiles);
 end;
 
 procedure TForm1.btnListFilesClick(Sender: TObject);
