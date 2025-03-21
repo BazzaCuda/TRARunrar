@@ -22,6 +22,18 @@ Of course, big thanks are due to Phillipe for his original 32-bit component, som
 _N.B. If you download the DLL from rarlab.com, the code expects you to rename unrar.dll to either unrar32.dll or unrar64.dll, as appropriate, so that you can easily switch between compiling and running your application for either architecture; both DLLs are included for download in this project's releases._
 
 -----------
+### Update History
+v2.1 (2025-03-21)
+
+Correction to TRAROpenArchiveDataEx in line with unrar's C struct which was preventing any archive comment from being read.
+
+Some header flags are not available when the RAR archive's header is encrypted - the comments in TRAR.processOpenArchive now reflect this.
+
+Added findFiles, general-purpose file-finding function which defaults to finding .rar archives.
+
+Created a separate registerTRAR.pas unit for compiling the package project and for installing/updating the component. Having the registration code in RAR.pas was preventing 32-bit applications from being compiled as they had no access to DesignEditors and DesignIntf.
+
+-----------
 
 Example usage:
 
