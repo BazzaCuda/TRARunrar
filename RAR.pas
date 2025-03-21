@@ -211,8 +211,8 @@ type
     FOnProgress:            TRAROnProgress;
     FOnReplace:             TRAROnReplace;
 
-    FFiles:                 TStringList;
-    FFoundFiles:            TStringList;
+    FFiles:                 TStringList; // list of filenames (and their full paths) within an archive, to be extracted
+    FFoundFiles:            TStringList; // files found using findFiles()
 
     function  getOnError:   TRAROnErrorNotifyEvent;
     procedure setOnError(const Value: TRAROnErrorNotifyEvent);
@@ -231,7 +231,7 @@ type
     function  getPassword: AnsiString;
     procedure setPassword(const Value: AnsiString);
     procedure SetlastResult(const Value: integer);
-    function getLastResult: integer;
+    function  getLastResult: integer;
 
   public
     constructor create(AOwner: TComponent); override;
