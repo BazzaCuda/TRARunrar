@@ -281,6 +281,18 @@ Although it defaults to finding '.rar' files, findFiles is a general-purpose fil
     showMessage('Found another one: ' + RAR.foundFiles[i];
 ```
 
+Get the DLL's file name:
+```Delphi
+  var vDLLName := RAR.DLLName; // will be unrar32.dll or unrar64.dll
+```
+Get the DLL's version number:
+```Delphi
+  var vDLLVersion: integer := RAR.DLLVersion;
+// Currently v9, a constant defined in unrar.dll
+// N.B. This is not the build version, which is currently v7.11.1.1525
+```
+
+
 
 
   
