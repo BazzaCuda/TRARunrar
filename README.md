@@ -237,8 +237,8 @@ On the rare occasion that they're in different locations, or the secondary parts
     end;
   end;
 ```
-
-Helper functions which don't require opening the RAR archive:
+---------
+### Helper functions which don't require opening the RAR archive:
 
 ```Delphi
   var vIsMultiVol := RAR.isMultiVol(archivePath); // is the filename a .part1.rar, .part01.rar or .part001.rar ?
