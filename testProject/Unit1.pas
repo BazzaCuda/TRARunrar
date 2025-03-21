@@ -22,6 +22,8 @@ type
     edtPassword: TLabeledEdit;
     Label4: TLabel;
     Label5: TLabel;
+    btnFindArchives: TButton;
+    lblLastError: TLabel;
     procedure RAR1ListFile(Sender: TObject; const aFileInformation: TRARFileItem);
     procedure RAR1Error(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
     procedure RAR1NextVolumeRequired(Sender: TObject; const aRequiredFileName: AnsiString; out oNewFileName: AnsiString; out oCancel: Boolean);
@@ -29,6 +31,7 @@ type
     procedure RAR1Progress(Sender: TObject; const aProgressInfo: TRARProgressInfo);
     procedure btnListFilesClick(Sender: TObject);
     procedure btnExtractClick(Sender: TObject);
+    procedure btnFindArchivesClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -51,6 +54,14 @@ uses RTTI;
 procedure TForm1.btnExtractClick(Sender: TObject);
 begin
   RAR1.extractArchive(edtRARArchive.Text, edtExtractPath.Text); // auto-creates the extraction path folder
+  lblLastError.caption := format('Last result code: %d', [RAR1.lastResult]);
+end;
+
+procedure TForm1.btnFindArchivesClick(Sender: TObject);
+begin
+  memo1.lines.clear;
+  RAR1.findArchives('..\..', TRUE);
+  memo1.lines.assign(RAR1.archives);
 end;
 
 procedure TForm1.btnListFilesClick(Sender: TObject);

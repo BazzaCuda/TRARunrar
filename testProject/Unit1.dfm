@@ -42,9 +42,9 @@ object Form1: TForm1
   object Label3: TLabel
     Left = 280
     Top = 83
-    Width = 83
+    Width = 149
     Height = 15
-    Caption = 'Files in Archive'
+    Caption = 'Archives or Files in Archive'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -12
@@ -81,6 +81,13 @@ object Form1: TForm1
     Font.Style = [fsItalic]
     ParentFont = False
   end
+  object lblLastError: TLabel
+    Left = 150
+    Top = 188
+    Width = 88
+    Height = 15
+    Caption = 'Last result code: '
+  end
   object edtRARArchive: TLabeledEdit
     Left = 56
     Top = 24
@@ -105,8 +112,8 @@ object Form1: TForm1
     Text = '..\..\testArchive.rar'
   end
   object btnListFiles: TButton
-    Left = 56
-    Top = 96
+    Left = 168
+    Top = 101
     Width = 75
     Height = 25
     Caption = 'List Files'
@@ -156,6 +163,15 @@ object Form1: TForm1
     EditLabel.Caption = 'Password (default is in the code)'
     TabOrder = 5
     Text = ''
+  end
+  object btnFindArchives: TButton
+    Left = 64
+    Top = 101
+    Width = 83
+    Height = 25
+    Caption = 'Find Archives'
+    TabOrder = 6
+    OnClick = btnFindArchivesClick
   end
   object RAR1: TRAR
     onError = RAR1Error

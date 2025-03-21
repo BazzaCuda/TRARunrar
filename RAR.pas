@@ -212,6 +212,7 @@ type
     FOnReplace:             TRAROnReplace;
 
     FFiles:                 TStringList;
+    FArchives:              TStringList;
 
     function  getOnError:   TRAROnErrorNotifyEvent;
     procedure setOnError(const Value: TRAROnErrorNotifyEvent);
@@ -224,10 +225,13 @@ type
     function  getArchiveInfo: TRARArchiveInfo;
     function  getDLLVersion:  integer;
   private
+    FlastResult: integer;
     function  getReadMVToEnd: boolean;
     procedure setReadMVToEnd(const Value: boolean);
     function  getPassword: AnsiString;
     procedure setPassword(const Value: AnsiString);
+    procedure SetlastResult(const Value: integer);
+    function getLastResult: integer;
 
   public
     constructor create(AOwner: TComponent); override;
@@ -245,12 +249,15 @@ type
     function  prepareArchive(const aArchivePath: string):   boolean;
     function  testArchive(const aArchivePath: string):      boolean;
 
+    function  findArchives(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
     function  isMultiVol(const aArchivePath: string):       boolean;
     function  isMultiVolPart(const aArchivePath: string):   boolean;
 
+    property archives:              TStringList               read FArchives;
     property archiveInfo:           TRARArchiveInfo           read getArchiveInfo;
     property DLLName:               string                    read getDLLName;
     property DLLVersion:            integer                   read getDLLVersion;
+    property lastResult:            integer                   read getLastResult;
     //pro: report correct archive compressed size and list all files in all parts
     //con: "all volumes required" means that to open, you have to insert all disks if not all volumes are in the same folder
     property readMultiVolumeToEnd:  boolean                   read getReadMVToEnd         write setReadMVToEnd; //if true, mv's will be read until last part of the file
@@ -385,6 +392,15 @@ begin
     abort         := FALSE;
   end;
 end;
+
+function ITBS(aFolderPath: string): string;
+const BACKSLASH = #92;
+begin
+  result := aFolderPath;
+  case length(result) = 0 of TRUE: EXIT; end;
+  case result[high(result)] = BACKSLASH of FALSE: result := result + BACKSLASH; end;
+end;
+
 
 function processDataCallBack(addr: PByte; size: integer): integer;
 //var
@@ -846,13 +862,16 @@ begin
   FFiles.duplicates     := dupIgnore;
   FFiles.caseSensitive  := FALSE;
 
+  FArchives             := TStringList.create;
+
   FOnProgress           := onRARProgressTest;
 end;
 
 destructor TRAR.Destroy;
 begin
-  case assigned(FRAR)   of TRUE: FRAR.free; end;
-  case assigned(FFiles) of TRUE: FFiles.free; end;
+  case assigned(FRAR)       of TRUE: FRAR.free; end;
+  case assigned(FFiles)     of TRUE: FFiles.free; end;
+  case assigned(FArchives)  of TRUE: FArchives.free; end;
   inherited destroy;
 end;
 
@@ -893,6 +912,34 @@ begin
   result := FFiles.count;
 end;
 
+function TRAR.findArchives(const aFolderPath: string; bSubFolders: boolean = TRUE; const aFileExts: string = '.rar'): integer;
+var
+  SR:           TSearchRec;
+  RC:           integer;
+
+  function extOK: boolean;
+  begin
+    var vExt  := lowerCase(extractFileExt(SR.name));
+    result    := pos(vExt, aFileExts) > 0;
+  end;
+
+begin
+  result          := 0;
+  var vFolderPath := ITBS(aFolderPath);
+  var vAttr       := faAnyFile AND NOT faHidden and NOT faSysFile;
+  case bSubFolders of FALSE: vAttr := vAttr AND NOT faDirectory; end;
+
+  case findFirst(vFolderPath + '*.*', vAttr, SR) = 0 of TRUE:
+    repeat
+      case ((SR.attr AND faDirectory) = faDirectory) of
+         TRUE: case (SR.name <> '.') and (SR.name <> '..') of TRUE: findArchives(vFolderPath + SR.name, bSubFolders, aFileExts); end;
+        FALSE: case extOK and NOT isMultiVolPart(vFolderPath + SR.name) of TRUE: FArchives.add(vFolderPath + SR.name); end;end;
+    until findNext(SR) <> 0; end;
+
+  sysUtils.findClose(SR);
+  result := FArchives.count;
+end;
+
 function TRAR.listArchive(const aArchivePath: string): boolean;
 begin
   result := listRARFiles(aArchivePath, FRAR, FOnListFile, FOnPasswordRequired, FOnNextVolumeRequired);
@@ -901,6 +948,11 @@ end;
 function TRAR.prepareArchive(const aArchivePath: string): boolean;
 begin
   result := prepareRARArchive(aArchivePath, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
+end;
+
+procedure TRAR.SetlastResult(const Value: integer);
+begin
+  FlastResult := Value;
 end;
 
 function TRAR.testArchive(const aArchivePath: string): boolean;
@@ -938,6 +990,11 @@ end;
 function TRAR.getDLLVersion: integer;
 begin
   case csDesigning in componentState of FALSE: result := RARGetDLLVersion; end;
+end;
+
+function TRAR.getLastResult: integer;
+begin
+  result := RR.lastResult;
 end;
 
 function TRAR.getOnError: TRAROnErrorNotifyEvent;
