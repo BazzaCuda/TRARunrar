@@ -213,8 +213,8 @@ type
     cmtState:     cardinal;
 //
     flags:        cardinal;
-    callback:     cardinal;
-    userData:     cardinal;
+    callback:     {$IFDEF Win32} cardinal {$ELSE} NativeUInt {$ENDIF};
+    userData:     LPARAM;
     opFlags:      cardinal;
     cmtBufW:      PWideChar;
     markOfTheWeb: PWideChar;

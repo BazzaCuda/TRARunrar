@@ -118,6 +118,7 @@
         <DCCReference Include="DesignIDE.dcp"/>
         <DCCReference Include="..\RAR.pas"/>
         <DCCReference Include="..\RAR_DLL.pas"/>
+        <DCCReference Include="..\registerTRAR.pas"/>
         <RcItem Include="TRAR.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TRAR</ResourceId>

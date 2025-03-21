@@ -35,6 +35,7 @@ requires
 
 contains
   RAR in '..\RAR.pas',
-  RAR_DLL in '..\RAR_DLL.pas';
+  RAR_DLL in '..\RAR_DLL.pas',
+  registerTRAR in '..\registerTRAR.pas';
 
 end.

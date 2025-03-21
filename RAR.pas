@@ -37,7 +37,6 @@ unit RAR;
 interface
 
 uses
-  {$IFDEF Win32}designEditors, designIntf,{$ENDIF} // for the Delphi IDE only
   classes, sysUtils, windows,
   vcl.forms,
   RAR_DLL;
@@ -274,15 +273,6 @@ type
     property password:              AnsiString                read getPassword            write setPassword; // can be supplied by the user before calling an operation
   end;
 
-  {$IFDEF Win32} // for the Delphi IDE only
-  TVersionPropertyEditor = class(TStringProperty)
-  public
-    function getAttributes: TPropertyAttributes; override;
-  end;
-
-
-  procedure Register;
-  {$ENDIF}
 
 implementation
 
@@ -295,20 +285,6 @@ const
 
 var
   RR: IRARResult;
-
-{$IFDEF Win32} // for the Delphi IDE only
-procedure Register;
-begin
-  RegisterComponents('Baz Cuda', [TRAR]);
-end;
-
-
-function TVersionPropertyEditor.GetAttributes: TPropertyAttributes;
-begin
-  result := [paReadOnly, paValueList]; // Make it read-only and show as a list
-end;
-{$ENDIF}
-
 
 function checkRARResult(const aResultCode:integer; const aOperation: TRAROperation): integer;
 begin
@@ -545,27 +521,23 @@ function processOpenArchive(const aOpenArchiveDataEx: TRAROpenArchiveDataEx; con
 begin
   result := FALSE;
 
-  aRAR.info.volume          := ((aOpenArchiveDataEx.Flags AND ROADF_VOLUME)       = ROADF_VOLUME);        // Volume attribute (archive volume)
-  aRAR.info.archiveComment  := ((aOpenArchiveDataEx.Flags AND ROADF_COMMENT)      = ROADF_COMMENT);       // unrar doesn't seem to set this
-  aRAR.info.locked          := ((aOpenArchiveDataEx.Flags AND ROADF_LOCK)         = ROADF_LOCK);
-  aRAR.info.solid           := ((aOpenArchiveDataEx.Flags AND ROADF_SOLID)        = ROADF_SOLID);
+  aRAR.info.volume          := ((aOpenArchiveDataEx.Flags AND ROADF_VOLUME)       = ROADF_VOLUME);        // Volume attribute (archive volume) ???
+  aRAR.info.archiveComment  := ((aOpenArchiveDataEx.Flags AND ROADF_COMMENT)      = ROADF_COMMENT);       // not available if header is encrypted
+  aRAR.info.locked          := ((aOpenArchiveDataEx.Flags AND ROADF_LOCK)         = ROADF_LOCK);          // not available if header is encrypted
+  aRAR.info.solid           := ((aOpenArchiveDataEx.Flags AND ROADF_SOLID)        = ROADF_SOLID);         // not available if header is encrypted
   aRAR.info.newNumbering    := ((aOpenArchiveDataEx.Flags AND ROADF_NEWNUMBERING) = ROADF_NEWNUMBERING);  // new volume naming scheme ('volname.partN.rar')
-  aRAR.info.signed          := ((aOpenArchiveDataEx.Flags AND ROADF_SIGNED)       = ROADF_SIGNED);
-  aRAR.info.recovery        := ((aOpenArchiveDataEx.Flags AND ROADF_RECOVERY)     = ROADF_RECOVERY);      // unrar doesn't seem to set this
-  aRAR.info.headerEncrypted := ((aOpenArchiveDataEx.Flags AND ROADF_ENCHEADERS)   = ROADF_ENCHEADERS);    // unrar does set this
-  aRAR.info.firstVolume	    := ((aOpenArchiveDataEx.Flags AND ROADF_FIRSTVOLUME)  = ROADF_FIRSTVOLUME);
+  aRAR.info.signed          := ((aOpenArchiveDataEx.Flags AND ROADF_SIGNED)       = ROADF_SIGNED);        // not available if header is encrypted
+  aRAR.info.recovery        := ((aOpenArchiveDataEx.Flags AND ROADF_RECOVERY)     = ROADF_RECOVERY);      // not available if header is encrypted
+  aRAR.info.headerEncrypted := ((aOpenArchiveDataEx.Flags AND ROADF_ENCHEADERS)   = ROADF_ENCHEADERS);    // always available
+  aRAR.info.firstVolume	    := ((aOpenArchiveDataEx.Flags AND ROADF_FIRSTVOLUME)  = ROADF_FIRSTVOLUME);   // ???
 
   aRAR.info.SFX := isSFX(aRAR.info.fileName);
 
   case aOpenArchiveDataEx.cmtState of // read archive comment - cmtState is actually aRAR.commentState
-    {RAR_COMMENT_EXISTS}0, 1:   begin
+    RAR_COMMENT_EXISTS:   begin // not available if header is encrypted
                             aRAR.comment := strPas(aRAR.commentBuf);
                             aRAR.hasComment := TRUE;
                           end;
-//    RAR_NO_COMMENT:       begin
-//                            aRAR.comment := '';
-//                            aRAR.hasComment := FALSE;
-//                          end;
     ERAR_NO_MEMORY:       checkRARResult(ERAR_NO_MEMORY,       roOpenArchive);
     ERAR_BAD_DATA:        checkRARResult(ERAR_BAD_DATA,        roOpenArchive);
     ERAR_UNKNOWN_FORMAT:  checkRARResult(ERAR_UNKNOWN_FORMAT,  roOpenArchive);
@@ -1144,6 +1116,5 @@ end;
 
 initialization
   RR := TRARResult.create;
-  {$IFDEF Win32}registerPropertyEditor(TypeInfo(string), TRAR, 'Version', TVersionPropertyEditor);{$ENDIF} // for the Delphi IDE only
 
 end.
