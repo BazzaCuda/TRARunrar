@@ -29,7 +29,7 @@ Correction to TRAROpenArchiveDataEx in line with unrar's C struct which was prev
 
 Some header flags are not available when the RAR archive's header is encrypted - the comments in TRAR.processOpenArchive now reflect this.
 
-Added findFiles, general-purpose file-finding function which defaults to finding .rar archives.
+Added findFiles, general-purpose file-finding function which defaults to finding .rar archives. see usage below.
 
 Created a separate registerTRAR.pas unit for compiling the package project and for installing/updating the component. Having the registration code in RAR.pas was preventing 32-bit applications from being compiled as they had no access to DesignEditors and DesignIntf.
 
