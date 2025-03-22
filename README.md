@@ -209,6 +209,12 @@ Receiving error codes during RAR operations:
   end;
 ```
 
+Checking the result after a RAR operation:
+```Delphi
+   RAR.testArchive(archivePath);
+   label1.caption := format('RAR Result: %d', [RAR.lastResult]);
+```
+
 Receiving feedback during RAR operations:
 ```Delphi
   TRARProgressInfo = record // defined in RAR.pas
