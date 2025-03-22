@@ -6,6 +6,10 @@
 //
 //  please see license.txt and documentation.txt
 //
+//  changes in 2.1 stable
+//  added findFiles()
+//  minor fix to TRAROpenArchiveDataEx
+//
 //  changes in 2.0 stable (2025, Baz Cuda - https://github.com/BazzaCuda/TRARunrar/)
 //  - supports both the 32-bit and 64-bit versions of unrar.dll
 //  - switched to using the ...Ex functions in unrar.dll to get added info
@@ -229,7 +233,7 @@ type
     procedure setReadMVToEnd(const Value: boolean);
     function  getPassword: AnsiString;
     procedure setPassword(const Value: AnsiString);
-    procedure SetlastResult(const Value: integer);
+    procedure setlastResult(const Value: integer);
     function  getLastResult: integer;
 
   public
@@ -922,7 +926,7 @@ begin
   result := prepareRARArchive(aArchivePath, FRAR, FOnProgress, FOnPasswordRequired, FOnNextVolumeRequired);
 end;
 
-procedure TRAR.SetlastResult(const Value: integer);
+procedure TRAR.setlastResult(const Value: integer);
 begin
   FlastResult := Value;
 end;

@@ -6,6 +6,10 @@
 //
 //  please see license.txt and documentation.txt
 //
+//  changes in 2.1 stable
+//  added findFiles()
+//  minor fix to TRAROpenArchiveDataEx
+//
 //  changes in 2.0 stable (2025, Baz Cuda - https://github.com/BazzaCuda/TRARunrar/)
 //  - support for both the 32-bit and 64-bit versions of unrar.dll
 //  - switched to using the ...Ex functions in unrar.dll to get added info
