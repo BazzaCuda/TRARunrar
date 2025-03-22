@@ -198,7 +198,7 @@ On Request:
   end;
 ```
 
-Receiving error codes:
+Receiving error codes during RAR operations:
 ```Delphi
   RAR.onError := RARError; // must be procedure of object
   ...
