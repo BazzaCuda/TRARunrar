@@ -203,7 +203,7 @@ Receiving error codes:
   RAR.onError := RARError; // must be procedure of object
   ...
   // the error codes and operations are defined in RAR_DLL.pas
-  procedure TForm1.RAR1Error(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
+  procedure TForm1.RARError(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
   begin
     lblError.caption := format('code: %d, operation: %d', [aErrorCode, aOperation]);
   end;
