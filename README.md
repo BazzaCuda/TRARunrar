@@ -314,7 +314,7 @@ Get the DLL's version number:
 
   
 
-More on the way.  
+More on the way
 ```
 
 
