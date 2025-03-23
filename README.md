@@ -198,15 +198,21 @@ On Request:
   end;
 ```
 
-Receiving error codes:
+Receiving error codes during RAR operations:
 ```Delphi
   RAR.onError := RARError; // must be procedure of object
   ...
   // the error codes and operations are defined in RAR_DLL.pas
-  procedure TForm1.RAR1Error(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
+  procedure TForm1.RARError(Sender: TObject; const aErrorCode: Integer; const aOperation: TRAROperation);
   begin
     lblError.caption := format('code: %d, operation: %d', [aErrorCode, aOperation]);
   end;
+```
+
+Checking the result after a RAR operation:
+```Delphi
+   RAR.testArchive(archivePath);
+   label1.caption := format('RAR Result: %d', [RAR.lastResult]);
 ```
 
 Receiving feedback during RAR operations:
@@ -308,7 +314,7 @@ Get the DLL's version number:
 
   
 
-More on the way.  
+More on the way
 ```
 
 
