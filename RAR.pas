@@ -381,7 +381,6 @@ begin
   case result[high(result)] = BACKSLASH of FALSE: result := result + BACKSLASH; end;
 end;
 
-
 function processDataCallBack(addr: PByte; size: integer): integer;
 //var
 //  vData:        TBytes;
@@ -394,8 +393,8 @@ begin
 //  debugString('vDataString', vDataString);
 //  memoryStream.write(addr^, size);
 //  result := 0; // 0 = cancel. Anything else continues (rdwrfn.cpp)
+// result := 1;
 end;
-
 
 function initCallBack(const aRAR: TRARArchive;  aOnProgress:          TRAROnProgress            = NIL;
                                                 aOnPasswordRequired:  TRAROnPasswordRequired    = NIL;
@@ -586,7 +585,8 @@ end;
 
 function closeArchive(const aArchiveHandle: THANDLE): boolean;
 begin
-  case aArchiveHandle = RAR_INVALID_HANDLE of FALSE: result := checkRARResult(RARCloseArchive(aArchiveHandle), roCloseArchive) = RAR_SUCCESS; end;
+  result := NOT (aArchiveHandle = RAR_INVALID_HANDLE);
+  case result of TRUE: result := RARCloseArchive(aArchiveHandle) = RAR_SUCCESS; end;
 end;
 
 function extractArchiveFiles(const aExtractPath: string; const aFileName: string; const aFiles: TStringList; const aRAR: TRARArchive): boolean;
