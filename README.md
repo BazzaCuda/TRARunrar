@@ -15,7 +15,7 @@ A basic test project is included which will be enhanced based on feedback. TRAR 
 
 **Updates, comments and suggestions always welcome on the [Issues](https://github.com/BazzaCuda/TRARunrar/issues) page.**
 
-My Extractor application (https://github.com/BazzaCuda/Extractor) contains a wrapper for 7z.dll. TRAR will be incorporated into that application at some point (primarily to support multi-volume RAR archives) and will therefore serve as an additional test project for TRAR.
+My Extractor application (https://github.com/BazzaCuda/Extractor) contains a wrapper for 7z.dll. TRAR will be incorporated into that application at some point (primarily to support multi-volume RAR archives) and will therefore serve as an additional test project for TRAR (**2025/03/24: this has now been done**)
 
 Of course, big thanks are due to Phillipe for his original 32-bit component, some 16 years ago!
 
