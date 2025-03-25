@@ -427,7 +427,8 @@ var
 
 begin
   result := htDirectory;
-  case (aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory of TRUE: EXIT; end;
+  case (aFileHeaderDataEx.fileAttr = RAR_UNIX_DIRECTORY) of TRUE: EXIT; end; // directory, created by a RAR app on a version of UNIX, e.g. Android
+  case (aFileHeaderDataEx.fileAttr < RAR_UNIX_FILE) and ((aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory) of TRUE: EXIT; end;
 
   result := htSplitFile;
   case aRAR.ReadMVToEnd of TRUE:

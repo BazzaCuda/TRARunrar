@@ -126,6 +126,9 @@ const
   RAR_DLL_LOAD_ERROR    = 99;
   RAR_INVALID_HANDLE    =  0;
 
+  RAR_UNIX_DIRECTORY    = 16888;
+  RAR_UNIX_FILE         = 33200;
+
 type
   TProcessDataProc  = function(Addr: PByte; Size: integer): integer;
   TChangeVolProc    = function(ArcName: PAnsiChar; Mode: integer): integer; {$IFDEF Win32} stdcall {$ELSE} cdecl {$ENDIF};
