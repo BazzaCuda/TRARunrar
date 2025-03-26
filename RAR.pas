@@ -285,7 +285,7 @@ uses
   system.ioUtils;
 
 const
-  gVersion = '2.2';
+  gVersion = '2.3';
 
 var
   RR: IRARResult;
@@ -323,7 +323,7 @@ begin
                                               strPCopy(PAnsiChar(P1), vFileName);
                                             end;
 
-                              RAR_VOL_NOTIFY: {$IF BazDebugWindow} debug('found next vol') {$ENDIF}; // occurs when next volume required and next part was found
+                              RAR_VOL_NOTIFY: {$IF BazDebugWindow} {debug('found next vol')} {$ENDIF}; // occurs when next volume required and next part was found
                             end;end;
 
       UCM_NEEDPASSWORD: begin
@@ -427,8 +427,11 @@ var
 
 begin
   result := htDirectory;
-  case (aFileHeaderDataEx.fileAttr = RAR_UNIX_DIRECTORY) of TRUE: EXIT; end; // directory, created by a RAR app on a version of UNIX, e.g. Android
-  case (aFileHeaderDataEx.fileAttr < RAR_UNIX_FILE) and ((aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory) of TRUE: EXIT; end;
+//  case (aFileHeaderDataEx.fileAttr = RAR_UNIX_DIRECTORY)  of TRUE: EXIT; end; // directory, created by a RAR app on a version of UNIX, e.g. Android
+//  case (aFileHeaderDataEx.fileAttr = RAR_UNIX_UNK_DIR)    of TRUE: EXIT; end; // directory, created by a RAR app on a version of UNIX, e.g. Android
+//  case (aFileHeaderDataEx.fileAttr = RAR_NON_STD_DIR)     of TRUE: EXIT; end;
+//  case (aFileHeaderDataEx.fileAttr <> RAR_NON_STD_FILE) and ((aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory) of TRUE: EXIT; end;
+  case aFileHeaderDataEx.flags = 32 of TRUE: EXIT; end;
 
   result := htSplitFile;
   case aRAR.ReadMVToEnd of TRUE:
@@ -597,8 +600,8 @@ begin
   aRAR.progressInfo := default(TRARProgressInfo);
 
   {$IF BazDebugWindow}
-  debug('extractArchiveFiles: aExtractPath = ' + aExtractPath);
-  debug('extractArchiveFiles: aFileName   = ' + aFileName);
+  // debug('extractArchiveFiles: aExtractPath = ' + aExtractPath);
+  // debug('extractArchiveFiles: aFileName   = ' + aFileName);
   {$ENDIF}
 
   aRAR.progressInfo.ArchiveBytesTotal := aRAR.info.unCompressedSize; // the list operation in testRARArchive obtained aRAR.info.unCompressedSize
@@ -809,9 +812,9 @@ end;
 procedure TRAR.onRARProgressTest(Sender: TObject; const aProgressInfo: TRARProgressInfo);
 begin
   {$IF BazDebugWindow}
-  debugString('FileName', aProgressInfo.FileName);
-  debugFormat('Archive Bytes: %d, Archive Bytes Done: %d', [aProgressInfo.ArchiveBytesTotal, aProgressInfo.ArchiveBytesDone]);
-  debugFormat('FileBytesTotal: %d, FileBytesDone: %d', [aProgressInfo.FileBytesTotal, aProgressInfo.FileBytesDone]);
+//  debugString('FileName', aProgressInfo.FileName);
+//  debugFormat('Archive Bytes: %d, Archive Bytes Done: %d', [aProgressInfo.ArchiveBytesTotal, aProgressInfo.ArchiveBytesDone]);
+//  debugFormat('FileBytesTotal: %d, FileBytesDone: %d', [aProgressInfo.FileBytesTotal, aProgressInfo.FileBytesDone]);
   {$ENDIF}
 end;
 
@@ -858,9 +861,9 @@ begin
   case (length(vExtractPath) > 0) and (vExtractPath[length(vExtractPath)] <> '\') of TRUE: vExtractPath := vExtractPath + '\'; end;
 
   {$IF BazDebugWindow}
-  debugString('aArchiePath', aArchivePath);
-  debugString('vExtractPath', vExtractPath);
-  debugString('aFileName', aFileName);
+//  debugString('aArchivePath', aArchivePath);
+//  debugString('vExtractPath', vExtractPath);
+//  debugString('aFileName', aFileName);
   {$ENDIF}
 
   ForceDirectories(vExtractPath);
@@ -874,9 +877,9 @@ begin
   case (length(vExtractPath) > 0) and (vExtractPath[length(vExtractPath)] <> '\') of TRUE: vExtractPath := vExtractPath + '\'; end;
 
   {$IF BazDebugWindow}
-  debugString('aArchivePath', aArchivePath);
-  debugString('vExtractPath', vExtractPath);
-  debugString('aFileName', aFileName);
+//  debugString('aArchivePath', aArchivePath);
+//  debugString('vExtractPath', vExtractPath);
+//  debugString('aFileName', aFileName);
   {$ENDIF}
 
   ForceDirectories(vExtractPath);
@@ -1038,7 +1041,7 @@ begin
   FLastResult := aResultCode;
 
   {$IF BazDebugWindow}
-    debugFormat('Error: aResultCode: %d, aOperation: %d', [aResultCode, ord(aOperation)]);
+//    debugFormat('Error: aResultCode: %d, aOperation: %d', [aResultCode, ord(aOperation)]);
   {$ENDIF}
 
   var vReport := aResultCode in [
