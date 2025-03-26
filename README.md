@@ -23,6 +23,10 @@ _N.B. If you download the DLL from rarlab.com, the code expects you to rename un
 
 -----------
 ### Update History
+v2.2 (2025-03-25)
+
+Allow for RAR archives created [by a RarLab application] on Linux and Unix variants, e.g. Android. These have different file attribute values for files and directories which prevented TRAR from listing the files in such archives.
+
 v2.1 (2025-03-21)
 
 Correction to TRAROpenArchiveDataEx in line with unrar's C struct which was preventing any archive comment from being read.
