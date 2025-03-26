@@ -38,6 +38,10 @@ Added findFiles, general-purpose file-finding function which defaults to finding
 Created a separate registerTRAR.pas unit for compiling the package project and for installing/updating the component. Having the registration code in RAR.pas was preventing 32-bit applications from being compiled as they had no access to DesignEditors and DesignIntf.
 
 -----------
+### Planned Development
+- Extract a single file to a TStream instead of directly to disk
+
+-----------
 
 Example usage:
 
