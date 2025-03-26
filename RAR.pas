@@ -285,7 +285,7 @@ uses
   system.ioUtils;
 
 const
-  gVersion = '2.1';
+  gVersion = '2.2';
 
 var
   RR: IRARResult;
