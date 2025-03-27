@@ -25,7 +25,7 @@ _N.B. If you download the DLL from rarlab.com, the code expects you to rename un
 ### Update History
 v2.3 (2025-03-26)
 
-WinRAR and UnRAR both create some very peculiar non-standard file attributes in RAR archives, both for directories and for files, e.g. 20020, 80010, 1A0010 and 1A0020. This makes separating directories from files more difficult than it should be.
+WinRAR and UnRAR both create some very peculiar non-standard file attributes in RAR archives, both for directories and for files, e.g. 20020, 80010, 1A0010 and 1A0020. This makes distinguising directories from files more difficult than it should be.
 
 After some investigation, it appears to be more reliable to simply check for the TRARHeaderDataEx.flags = 32 (see processFileHeader in RAR.pas), which seems to be consistent even when the non-standard file attributes are present.
 
