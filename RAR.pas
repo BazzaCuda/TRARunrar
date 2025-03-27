@@ -427,10 +427,6 @@ var
 
 begin
   result := htDirectory;
-//  case (aFileHeaderDataEx.fileAttr = RAR_UNIX_DIRECTORY)  of TRUE: EXIT; end; // directory, created by a RAR app on a version of UNIX, e.g. Android
-//  case (aFileHeaderDataEx.fileAttr = RAR_UNIX_UNK_DIR)    of TRUE: EXIT; end; // directory, created by a RAR app on a version of UNIX, e.g. Android
-//  case (aFileHeaderDataEx.fileAttr = RAR_NON_STD_DIR)     of TRUE: EXIT; end;
-//  case (aFileHeaderDataEx.fileAttr <> RAR_NON_STD_FILE) and ((aFileHeaderDataEx.fileAttr AND faDirectory) = faDirectory) of TRUE: EXIT; end;
   case (aFileHeaderDataEx.flags AND RHDF_DIRECTORY) = RHDF_DIRECTORY of TRUE: EXIT; end;
 
   result := htSplitFile;
