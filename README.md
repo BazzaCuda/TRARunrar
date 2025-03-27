@@ -50,8 +50,14 @@ Created a separate registerTRAR.pas unit for compiling the package project and f
 - Extract a single file to a TStream instead of directly to disk
 
 -----------
-
-Example usage:
+### Recommended way to stay up to date with development
+1. Install the free "GitHub Desktop" for Windows (https://desktop.github.com/download/)
+2. Clone the TRAR repository to a folder on your computer: File -> Clone Repository -> URL -> https://github.com/BazzaCuda/TRARunrar/
+3. "Use" RAR.pas directly from this folder in your Delphi projects.
+4. Check for updates periodically - indicated automatically in GitHub Desktop.
+5. If you do decide to install the TRAR component in your Delphi IDE, don't "save package changes" when you close the TRAR.dpk project.
+------
+### Example usage:
 
 ```Delphi
 uses
